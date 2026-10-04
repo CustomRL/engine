@@ -13,7 +13,7 @@ void check(HRESULT hr, const char* what) {
         fatal("%s failed: 0x%08lx", what, static_cast<unsigned long>(hr));
 }
 
-HRESULT createDevice(UINT flags, ID3D11Device** device, ID3D11DeviceContext** context) {
+HRESULT makeDevice(UINT flags, ID3D11Device** device, ID3D11DeviceContext** context) {
     const D3D_FEATURE_LEVEL level = D3D_FEATURE_LEVEL_11_0;
     return D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flags, &level, 1, D3D11_SDK_VERSION, device, nullptr,
                              context);
@@ -21,15 +21,23 @@ HRESULT createDevice(UINT flags, ID3D11Device** device, ID3D11DeviceContext** co
 
 }
 
-Device::Device(void* hwnd) {
+Device::Device() {
+    createDevice();
+}
+
+void Device::createDevice() {
 #ifdef NDEBUG
-    check(createDevice(0, &device_, &context_), "D3D11CreateDevice");
+    check(makeDevice(0, &device_, &context_), "D3D11CreateDevice");
 #else
-    HRESULT hr = createDevice(D3D11_CREATE_DEVICE_DEBUG, &device_, &context_);
+    HRESULT hr = makeDevice(D3D11_CREATE_DEVICE_DEBUG, &device_, &context_);
     if (hr == DXGI_ERROR_SDK_COMPONENT_MISSING) // the Graphics Tools feature that holds the debug layer is not installed
-        hr = createDevice(0, &device_, &context_);
+        hr = makeDevice(0, &device_, &context_);
     check(hr, "D3D11CreateDevice");
 #endif
+}
+
+Device::Device(void* hwnd) {
+    createDevice();
 
     ComPtr<IDXGIDevice> dxgiDevice;
     check(device_.As(&dxgiDevice), "IDXGIDevice");

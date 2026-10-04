@@ -8,7 +8,10 @@ namespace engine::gpu {
 
 class Device {
 public:
+    // A device presenting to the window
     explicit Device(void* hwnd);
+    // A device with no window, for drawing offscreen only: beginFrame and present are not for it
+    Device();
 
     // Binds and clears the back buffer and its depth buffer (D32_FLOAT, cleared to 1), resizing them to the window first, and sets the
     // viewport to cover them. False while the window has no area.
@@ -21,6 +24,7 @@ public:
     ID3D11DeviceContext* context() const { return context_.Get(); }
 
 private:
+    void createDevice();
     void resize(int width, int height);
     UINT swapChainFlags() const;
 
