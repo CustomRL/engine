@@ -30,6 +30,8 @@ public:
     bool held(int key) const { return pressed_[key] >= 0; }
     // The mouse's movement since the last call, in pixels, y growing downward
     void takeMouseMotion(float& dx, float& dy);
+    // The wheel's turn since the last call, in notches, positive away from the user
+    float takeWheel();
     // The first connected gamepad as of now, or null without one
     const Gamepad* gamepad();
 
@@ -39,6 +41,7 @@ private:
     double pressed_[KeyCount];
     float mouseX_ = 0;
     float mouseY_ = 0;
+    float wheel_ = 0;
     SDL_Gamepad* pad_ = nullptr;
     Gamepad state_;
 };

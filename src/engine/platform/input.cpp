@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <utility>
 
 namespace engine {
 
@@ -45,6 +46,9 @@ void Input::handle(const SDL_Event& event) {
         mouseX_ += event.motion.xrel;
         mouseY_ += event.motion.yrel;
         break;
+    case SDL_EVENT_MOUSE_WHEEL:
+        wheel_ += event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -event.wheel.y : event.wheel.y;
+        break;
     case SDL_EVENT_WINDOW_FOCUS_LOST:  // a key let go in another window never sends its release here
         std::fill(std::begin(pressed_), std::end(pressed_), -1.0);
         break;
@@ -68,6 +72,10 @@ void Input::takeMouseMotion(float& dx, float& dy) {
     dx = mouseX_;
     dy = mouseY_;
     mouseX_ = mouseY_ = 0;
+}
+
+float Input::takeWheel() {
+    return std::exchange(wheel_, 0.0f);
 }
 
 const Gamepad* Input::gamepad() {
