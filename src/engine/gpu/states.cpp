@@ -15,11 +15,19 @@ void check(HRESULT hr, const char* what) {
 
 States::States(Device& device) {
     auto* d3d = device.d3d();
-    for (int b = 0; b < 3; b++) {
+    for (int b = 0; b < 4; b++) {
         D3D11_BLEND_DESC desc{};
         auto& target = desc.RenderTarget[0];
         target.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-        if (b != static_cast<int>(Blend::Opaque)) {
+        if (b == static_cast<int>(Blend::Modulate)) {  // TStaticBlendState<BO_Add, BF_DestColor, BF_Zero>, its alpha One and Zero
+            target.BlendEnable = TRUE;
+            target.SrcBlend = D3D11_BLEND_DEST_COLOR;
+            target.DestBlend = D3D11_BLEND_ZERO;
+            target.BlendOp = D3D11_BLEND_OP_ADD;
+            target.SrcBlendAlpha = D3D11_BLEND_ONE;
+            target.DestBlendAlpha = D3D11_BLEND_ZERO;
+            target.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+        } else if (b != static_cast<int>(Blend::Opaque)) {
             const bool additive = b == static_cast<int>(Blend::Additive);
             target.BlendEnable = TRUE;
             target.SrcBlend = additive ? D3D11_BLEND_ONE : D3D11_BLEND_SRC_ALPHA;

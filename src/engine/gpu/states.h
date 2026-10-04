@@ -4,8 +4,9 @@
 
 namespace engine::gpu {
 
-// Colour = src x SrcAlpha + dst x (1 - SrcAlpha) for Translucent, src + dst for Additive, as WebGL's normal and one-one blending
-enum class Blend { Opaque, Translucent, Additive };
+// Colour = src x SrcAlpha + dst x (1 - SrcAlpha) for Translucent, src + dst for Additive, as WebGL's normal and one-one blending; src x dst
+// for Modulate, as UE3's BLEND_Modulate
+enum class Blend { Opaque, Translucent, Additive, Modulate };
 // LessEqual tests, as WebGL's default
 enum class Depth { TestWrite, Test, Off };
 // Which side is culled for triangles listed clockwise on screen as the front
@@ -20,7 +21,7 @@ public:
     ID3D11RasterizerState* cull(Cull c) const { return cull_[static_cast<int>(c)].Get(); }
 
 private:
-    Microsoft::WRL::ComPtr<ID3D11BlendState> blend_[3];
+    Microsoft::WRL::ComPtr<ID3D11BlendState> blend_[4];
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> depth_[3];
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> cull_[3];
 };
