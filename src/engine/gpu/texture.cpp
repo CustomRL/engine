@@ -66,6 +66,28 @@ Texture createTextureCube(Device& device, int size, TextureFormat format, const 
     return create(device, size, size, format, faces, 6, true, mips);
 }
 
+Texture createTexture2D(Device& device, int width, int height, DXGI_FORMAT format, const std::vector<MipLevel>& mips) {
+    D3D11_TEXTURE2D_DESC desc{};
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = static_cast<UINT>(mips.size());
+    desc.ArraySize = 1;
+    desc.Format = format;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    std::vector<D3D11_SUBRESOURCE_DATA> data(mips.size());
+    for (size_t i = 0; i < mips.size(); i++)
+        data[i] = {mips[i].data, mips[i].rowPitch, 0};
+
+    Texture out;
+    out.width = width;
+    out.height = height;
+    check(device.d3d()->CreateTexture2D(&desc, data.data(), &out.texture), "CreateTexture2D (mips)");
+    check(device.d3d()->CreateShaderResourceView(out.texture.Get(), nullptr, &out.view), "CreateShaderResourceView (mips)");
+    return out;
+}
+
 RenderTarget createRenderTarget(Device& device, int width, int height, DXGI_FORMAT format) {
     D3D11_TEXTURE2D_DESC desc{};
     desc.Width = width;

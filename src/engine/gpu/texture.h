@@ -44,6 +44,14 @@ struct DepthTarget {
 };
 DepthTarget createDepthTarget(Device& device, int width, int height);
 
+// A texture with its mips given, top first, none generated, in any format the device samples (block-compressed ones too). rowPitch: the
+// bytes of one row of texels, or of one row of 4x4 blocks
+struct MipLevel {
+    const void* data;
+    unsigned rowPitch;
+};
+Texture createTexture2D(Device& device, int width, int height, DXGI_FORMAT format, const std::vector<MipLevel>& mips);
+
 // A 2D texture's top level copied back to the CPU, top row first, rows packed tightly
 std::vector<uint8_t> readBack(Device& device, ID3D11Texture2D* texture);
 
