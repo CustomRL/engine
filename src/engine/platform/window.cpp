@@ -6,9 +6,16 @@
 
 namespace engine {
 
-Window::Window(const char* title, int width, int height) {
-    if (!SDL_Init(SDL_INIT_VIDEO))
+Window::Sdl::Sdl() {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
         fatal("SDL_Init: %s", SDL_GetError());
+}
+
+Window::Sdl::~Sdl() {
+    SDL_Quit();
+}
+
+Window::Window(const char* title, int width, int height) {
     window_ = SDL_CreateWindow(title, width, height, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!window_)
         fatal("SDL_CreateWindow: %s", SDL_GetError());
@@ -16,14 +23,15 @@ Window::Window(const char* title, int width, int height) {
 
 Window::~Window() {
     SDL_DestroyWindow(window_);
-    SDL_Quit();
 }
 
 bool Window::pump() {
     SDL_Event event;
-    while (SDL_PollEvent(&event))
+    while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_QUIT)
             return false;
+        input_.handle(event);
+    }
     return true;
 }
 
@@ -33,6 +41,10 @@ void* Window::hwnd() const {
 
 void Window::pixelSize(int& width, int& height) const {
     SDL_GetWindowSizeInPixels(window_, &width, &height);
+}
+
+void Window::setTitle(const char* title) {
+    SDL_SetWindowTitle(window_, title);
 }
 
 }
