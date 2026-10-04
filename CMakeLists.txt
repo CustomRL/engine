@@ -18,6 +18,7 @@ add_library(engine STATIC
     src/engine/render/lines.cpp
     src/engine/ui2d/canvas.cpp
     src/engine/ui2d/font.cpp
+    src/engine/ui2d/glow.cpp
     src/engine/ui2d/image.cpp)
 target_include_directories(engine PUBLIC src)
 target_include_directories(engine PRIVATE ${Stb_INCLUDE_DIR})
