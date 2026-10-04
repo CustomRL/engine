@@ -6,6 +6,7 @@ find_package(SDL3 CONFIG REQUIRED)
 add_library(engine STATIC
     src/engine/core/fatal.cpp
     src/engine/gpu/device.cpp
+    src/engine/gpu/texture.cpp
     src/engine/platform/clock.cpp
     src/engine/platform/input.cpp
     src/engine/platform/window.cpp
