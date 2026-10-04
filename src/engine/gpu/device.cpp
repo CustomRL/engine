@@ -37,6 +37,11 @@ Device::Device(void* hwnd) {
     check(dxgiDevice->GetAdapter(&adapter), "GetAdapter");
     ComPtr<IDXGIFactory2> factory;
     check(adapter->GetParent(IID_PPV_ARGS(&factory)), "IDXGIFactory2");
+    // Unsynced presents tear instead of waiting for the compositor where the system allows it (Windows 10 1803 and a driver that agrees)
+    ComPtr<IDXGIFactory5> factory5;
+    BOOL tearing = FALSE;
+    tearing_ = SUCCEEDED(factory.As(&factory5)) &&
+               SUCCEEDED(factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearing, sizeof tearing)) && tearing;
 
     DXGI_SWAP_CHAIN_DESC1 desc{};
     desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -44,6 +49,7 @@ Device::Device(void* hwnd) {
     desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     desc.BufferCount = 2;
     desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    desc.Flags = swapChainFlags();
     const auto window = static_cast<HWND>(hwnd);
     check(factory->CreateSwapChainForHwnd(device_.Get(), window, &desc, nullptr, nullptr, &swapChain_), "CreateSwapChainForHwnd");
     // SDL owns fullscreen; DXGI's own Alt+Enter would fight it.
@@ -65,14 +71,18 @@ bool Device::beginFrame(int width, int height, const float clearColor[4]) {
 }
 
 void Device::present(bool vsync) {
-    check(swapChain_->Present(vsync ? 1 : 0, 0), "Present");
+    check(swapChain_->Present(vsync ? 1 : 0, !vsync && tearing_ ? DXGI_PRESENT_ALLOW_TEARING : 0), "Present");
+}
+
+UINT Device::swapChainFlags() const {
+    return tearing_ ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 }
 
 void Device::resize(int width, int height) {
     context_->OMSetRenderTargets(0, nullptr, nullptr);
     backBuffer_.Reset();
     depth_.Reset();
-    check(swapChain_->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0), "ResizeBuffers");
+    check(swapChain_->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, swapChainFlags()), "ResizeBuffers");
     ComPtr<ID3D11Texture2D> texture;
     check(swapChain_->GetBuffer(0, IID_PPV_ARGS(&texture)), "GetBuffer");
     check(device_->CreateRenderTargetView(texture.Get(), nullptr, &backBuffer_), "CreateRenderTargetView");
