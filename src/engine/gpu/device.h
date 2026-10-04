@@ -22,6 +22,8 @@ public:
 
     ID3D11Device* d3d() const { return device_.Get(); }
     ID3D11DeviceContext* context() const { return context_.Get(); }
+    // The window's back buffer, at the size the last beginFrame gave it
+    ID3D11RenderTargetView* backBuffer() const { return backBuffer_.Get(); }
 
 private:
     void createDevice();
