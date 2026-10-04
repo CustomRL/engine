@@ -20,12 +20,14 @@ The presets are `debug` and `release` (RelWithDebInfo). vcpkg installs the ports
 ## Using it from a game
 
 Add the engine as a submodule and call `add_subdirectory` on it. vcpkg reads only the top-level manifest, so the game's
-`vcpkg.json` must also list the engine's ports (today `sdl3`).
+`vcpkg.json` must also list the engine's ports (today `sdl3`). The engine's public headers include `windows.h` through the D3D11 headers;
+it defines `NOMINMAX` and `WIN32_LEAN_AND_MEAN` for everything that links it.
 
 ## Layout
 
 ```
 src/engine/core/      fatal errors
-src/engine/platform/  the window (SDL3)
-src/engine/gpu/       the D3D11 device and swap chain
+src/engine/platform/  the window (SDL3), its input (keys with their press times, mouse motion, the first gamepad) and the clock
+src/engine/gpu/       the D3D11 device, swap chain and depth buffer
+src/engine/render/    debug lines
 ```
