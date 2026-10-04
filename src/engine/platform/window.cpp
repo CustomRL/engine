@@ -44,6 +44,13 @@ void Window::pixelSize(int& width, int& height) const {
     SDL_GetWindowSizeInPixels(window_, &width, &height);
 }
 
+void Window::cursor(float& x, float& y) const {
+    SDL_GetMouseState(&x, &y);  // window coordinates, which a high pixel density scales to pixels
+    const float density = SDL_GetWindowPixelDensity(window_);
+    x *= density;
+    y *= density;
+}
+
 void Window::setTitle(const char* title) {
     SDL_SetWindowTitle(window_, title);
 }

@@ -19,6 +19,8 @@ public:
     Input& input() { return input_; }
     void* hwnd() const;
     void pixelSize(int& width, int& height) const;
+    // The mouse cursor's position over the window as of the last pump, in pixels as pixelSize counts them
+    void cursor(float& x, float& y) const;
     void setTitle(const char* title);
 
 private:
