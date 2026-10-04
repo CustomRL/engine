@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 project(engine LANGUAGES CXX)
 
 find_package(SDL3 CONFIG REQUIRED)
+find_package(Stb REQUIRED)
 
 add_library(engine STATIC
     src/engine/core/fatal.cpp
@@ -14,8 +15,11 @@ add_library(engine STATIC
     src/engine/platform/clock.cpp
     src/engine/platform/input.cpp
     src/engine/platform/window.cpp
-    src/engine/render/lines.cpp)
+    src/engine/render/lines.cpp
+    src/engine/ui2d/canvas.cpp
+    src/engine/ui2d/image.cpp)
 target_include_directories(engine PUBLIC src)
+target_include_directories(engine PRIVATE ${Stb_INCLUDE_DIR})
 target_compile_features(engine PUBLIC cxx_std_20)
 # the GPU headers pull in windows.h for every file that includes them
 target_compile_definitions(engine PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
