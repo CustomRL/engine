@@ -56,8 +56,11 @@ bool Device::beginFrame(int width, int height, const float clearColor[4]) {
     if (width != width_ || height != height_)
         resize(width, height);
     ID3D11RenderTargetView* target = backBuffer_.Get();
-    context_->OMSetRenderTargets(1, &target, nullptr);
+    context_->OMSetRenderTargets(1, &target, depth_.Get());
     context_->ClearRenderTargetView(target, clearColor);
+    context_->ClearDepthStencilView(depth_.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+    const D3D11_VIEWPORT viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
+    context_->RSSetViewports(1, &viewport);
     return true;
 }
 
@@ -68,10 +71,23 @@ void Device::present(bool vsync) {
 void Device::resize(int width, int height) {
     context_->OMSetRenderTargets(0, nullptr, nullptr);
     backBuffer_.Reset();
+    depth_.Reset();
     check(swapChain_->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0), "ResizeBuffers");
     ComPtr<ID3D11Texture2D> texture;
     check(swapChain_->GetBuffer(0, IID_PPV_ARGS(&texture)), "GetBuffer");
     check(device_->CreateRenderTargetView(texture.Get(), nullptr, &backBuffer_), "CreateRenderTargetView");
+
+    D3D11_TEXTURE2D_DESC depthDesc{};
+    depthDesc.Width = width;
+    depthDesc.Height = height;
+    depthDesc.MipLevels = 1;
+    depthDesc.ArraySize = 1;
+    depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    depthDesc.SampleDesc.Count = 1;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    ComPtr<ID3D11Texture2D> depthTexture;
+    check(device_->CreateTexture2D(&depthDesc, nullptr, &depthTexture), "CreateTexture2D (depth)");
+    check(device_->CreateDepthStencilView(depthTexture.Get(), nullptr, &depth_), "CreateDepthStencilView");
     width_ = width;
     height_ = height;
 }
