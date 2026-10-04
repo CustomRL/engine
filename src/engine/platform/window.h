@@ -8,7 +8,8 @@ namespace engine {
 
 class Window {
 public:
-    Window(const char* title, int width, int height);
+    // borderless: no frame or title bar, as a game's borderless display mode opens it
+    Window(const char* title, int width, int height, bool borderless = false);
     ~Window();
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;

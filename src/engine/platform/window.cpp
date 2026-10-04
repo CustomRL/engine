@@ -15,8 +15,9 @@ Window::Sdl::~Sdl() {
     SDL_Quit();
 }
 
-Window::Window(const char* title, int width, int height) {
-    window_ = SDL_CreateWindow(title, width, height, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+Window::Window(const char* title, int width, int height, bool borderless) {
+    window_ = SDL_CreateWindow(title, width, height,
+                               (borderless ? SDL_WINDOW_BORDERLESS : SDL_WINDOW_RESIZABLE) | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!window_)
         fatal("SDL_CreateWindow: %s", SDL_GetError());
 }
