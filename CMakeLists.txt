@@ -8,8 +8,11 @@ add_library(engine STATIC
     src/engine/gpu/device.cpp
     src/engine/platform/clock.cpp
     src/engine/platform/input.cpp
-    src/engine/platform/window.cpp)
+    src/engine/platform/window.cpp
+    src/engine/render/lines.cpp)
 target_include_directories(engine PUBLIC src)
 target_compile_features(engine PUBLIC cxx_std_20)
+# the GPU headers pull in windows.h for every file that includes them
+target_compile_definitions(engine PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
 target_compile_options(engine PRIVATE /W4 /permissive-)
-target_link_libraries(engine PUBLIC SDL3::SDL3 d3d11 dxgi)
+target_link_libraries(engine PUBLIC SDL3::SDL3 d3d11 dxgi d3dcompiler)
