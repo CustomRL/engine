@@ -8,6 +8,7 @@ add_library(engine STATIC
     src/engine/gpu/buffer.cpp
     src/engine/gpu/device.cpp
     src/engine/gpu/sampler.cpp
+    src/engine/gpu/shader.cpp
     src/engine/gpu/states.cpp
     src/engine/gpu/texture.cpp
     src/engine/platform/clock.cpp
