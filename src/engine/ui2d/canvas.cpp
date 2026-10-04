@@ -129,6 +129,8 @@ Canvas::Canvas(gpu::Device& device) : device_(device) {
     raster.CullMode = D3D11_CULL_NONE;
     raster.DepthClipEnable = FALSE;
     check(d3d->CreateRasterizerState(&raster, &rasterizer_), "CreateRasterizerState (ui2d)");
+    raster.ScissorEnable = TRUE;
+    check(d3d->CreateRasterizerState(&raster, &scissor_), "CreateRasterizerState (ui2d scissor)");
     D3D11_SAMPLER_DESC sampler{};
     sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     sampler.AddressU = sampler.AddressV = sampler.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -207,6 +209,18 @@ void Canvas::flush() {
     context->OMSetBlendState(blends_[blend_ == Blend::Add ? 1 : 0].Get(), nullptr, 0xffffffff);
     context->DrawIndexed(static_cast<UINT>(vertices_.size() / 4 * 6), 0, 0);
     vertices_.clear();
+}
+
+void Canvas::clip(const std::array<int, 4>* rect) {
+    flush();
+    auto* context = device_.context();
+    if (!rect) {
+        context->RSSetState(rasterizer_.Get());
+        return;
+    }
+    const D3D11_RECT r{(*rect)[0], (*rect)[1], (*rect)[2], (*rect)[3]};
+    context->RSSetScissorRects(1, &r);
+    context->RSSetState(scissor_.Get());
 }
 
 void Canvas::end() {

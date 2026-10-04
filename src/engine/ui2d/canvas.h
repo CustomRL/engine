@@ -48,6 +48,8 @@ public:
     // A pass into target, width x height pixels, mapping stage units to pixels by stageToTarget (row vectors). clear: to transparent.
     void begin(ID3D11RenderTargetView* target, int width, int height, const DirectX::XMFLOAT4X4& stageToTarget, bool clear = false);
     void draw(const Quad& quad);
+    // what is drawn from here on lands only inside the target's pixel rectangle (x0, y0, x1, y1); null lifts it
+    void clip(const std::array<int, 4>* rect);
     void end();
 
 private:
@@ -71,7 +73,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader_;
     Microsoft::WRL::ComPtr<ID3D11InputLayout> layout_;
     Microsoft::WRL::ComPtr<ID3D11BlendState> blends_[2];
-    Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterizer_;
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterizer_, scissor_;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler_;
 };
 
