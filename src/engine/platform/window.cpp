@@ -51,6 +51,16 @@ void Window::cursor(float& x, float& y) const {
     y *= density;
 }
 
+void Window::showCursor(bool visible) {
+    if (visible == cursorShown_)
+        return;
+    cursorShown_ = visible;
+    if (visible)
+        SDL_ShowCursor();
+    else
+        SDL_HideCursor();
+}
+
 void Window::setTitle(const char* title) {
     SDL_SetWindowTitle(window_, title);
 }

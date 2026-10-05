@@ -21,6 +21,8 @@ public:
     void pixelSize(int& width, int& height) const;
     // The mouse cursor's position over the window as of the last pump, in pixels as pixelSize counts them
     void cursor(float& x, float& y) const;
+    // The system's mouse cursor over the window, shown or hidden; a call that changes nothing does nothing
+    void showCursor(bool visible);
     void setTitle(const char* title);
 
 private:
@@ -31,6 +33,7 @@ private:
     } sdl_;
     SDL_Window* window_;
     Input input_;
+    bool cursorShown_ = true;
 };
 
 }
