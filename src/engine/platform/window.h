@@ -2,9 +2,17 @@
 
 #include "engine/platform/input.h"
 
+#include <vector>
+
 struct SDL_Window;
 
 namespace engine {
+
+enum class DisplayMode { Fullscreen, Windowed, Borderless };
+
+struct DisplaySize {
+    int width, height;
+};
 
 class Window {
 public:
@@ -24,6 +32,11 @@ public:
     // The system's mouse cursor over the window, shown or hidden; a call that changes nothing does nothing
     void showCursor(bool visible);
     void setTitle(const char* title);
+    // The sizes in pixels the window's display offers as fullscreen modes, each once, smallest first
+    std::vector<DisplaySize> displayModes() const;
+    // The window at width x height pixels in a display mode: Fullscreen switches the display to the nearest of its modes, Borderless is a
+    // frameless window of that size centred on the display, Windowed a framed, resizable one centred on it. Returns once the system has done it.
+    void setDisplay(int width, int height, DisplayMode mode);
 
 private:
     // SDL itself, declared first so it quits after every member that holds SDL objects is gone
