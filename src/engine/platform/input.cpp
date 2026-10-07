@@ -79,7 +79,7 @@ float Input::takeWheel() {
 }
 
 const Gamepad* Input::gamepad() {
-    if (!pad_)
+    if (!pad_ || !padEnabled_)
         return nullptr;
     for (int a = 0; a < SDL_GAMEPAD_AXIS_COUNT; a++)
         state_.axes[a] = std::max(SDL_GetGamepadAxis(pad_, static_cast<SDL_GamepadAxis>(a)) / 32767.0f, -1.0f);

@@ -31,6 +31,14 @@ public:
     void cursor(float& x, float& y) const;
     // The system's mouse cursor over the window, shown or hidden; a call that changes nothing does nothing
     void showCursor(bool visible);
+    // Check runs: input as if the user gave it, handed to input() at once with no system-wide input and no move of the real cursor. The
+    // first mouse call makes cursor() report the synthetic position (pixels as pixelSize counts them) from then on, the real cursor's no
+    // longer; a button's number is SDL's (1 left)
+    void pushMouseMove(float x, float y);
+    void pushMouseButton(int button, bool down);
+    void pushKey(int scancode, bool down);
+    // On, pump drops what the user does (keys, mouse, focus changes, pads), so a run sees only what the push calls give it
+    void setPushedInputOnly(bool on);
     void setTitle(const char* title);
     // The sizes in pixels the window's display offers as fullscreen modes, each once, smallest first
     std::vector<DisplaySize> displayModes() const;
@@ -47,6 +55,8 @@ private:
     SDL_Window* window_;
     Input input_;
     bool cursorShown_ = true;
+    bool syntheticCursor_ = false, pushedMove_ = false, pushedOnly_ = false;
+    float cursorX_ = 0, cursorY_ = 0;  // the synthetic cursor, in the window's units
 };
 
 }

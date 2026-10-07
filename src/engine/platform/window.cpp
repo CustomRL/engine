@@ -33,7 +33,8 @@ bool Window::pump() {
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_QUIT)
             return false;
-        input_.handle(event);
+        if (!pushedOnly_)
+            input_.handle(event);
     }
     return true;
 }
@@ -47,10 +48,66 @@ void Window::pixelSize(int& width, int& height) const {
 }
 
 void Window::cursor(float& x, float& y) const {
-    SDL_GetMouseState(&x, &y);  // window coordinates, which a high pixel density scales to pixels
+    if (syntheticCursor_) {
+        x = cursorX_;
+        y = cursorY_;
+    } else {
+        SDL_GetMouseState(&x, &y);  // window coordinates, which a high pixel density scales to pixels
+    }
     const float density = SDL_GetWindowPixelDensity(window_);
     x *= density;
     y *= density;
+}
+
+void Window::pushMouseMove(float x, float y) {
+    const float density = SDL_GetWindowPixelDensity(window_);
+    SDL_Event event = {};
+    event.type = SDL_EVENT_MOUSE_MOTION;
+    event.motion.windowID = SDL_GetWindowID(window_);
+    event.motion.x = x / density;
+    event.motion.y = y / density;
+    if (!pushedMove_) {  // the first move has nothing to be relative to
+        cursorX_ = event.motion.x;
+        cursorY_ = event.motion.y;
+    }
+    event.motion.xrel = event.motion.x - cursorX_;
+    event.motion.yrel = event.motion.y - cursorY_;
+    event.common.timestamp = SDL_GetTicksNS();
+    input_.handle(event);
+    syntheticCursor_ = pushedMove_ = true;
+    cursorX_ = event.motion.x;
+    cursorY_ = event.motion.y;
+}
+
+void Window::pushMouseButton(int button, bool down) {
+    SDL_Event event = {};
+    event.type = down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+    event.button.windowID = SDL_GetWindowID(window_);
+    event.button.button = static_cast<Uint8>(button);
+    event.button.down = down;
+    event.button.x = cursorX_;
+    event.button.y = cursorY_;
+    event.common.timestamp = SDL_GetTicksNS();
+    input_.handle(event);
+}
+
+void Window::pushKey(int scancode, bool down) {
+    SDL_Event event = {};
+    event.type = down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;
+    event.key.windowID = SDL_GetWindowID(window_);
+    event.key.scancode = static_cast<SDL_Scancode>(scancode);
+    event.key.down = down;
+    event.common.timestamp = SDL_GetTicksNS();
+    input_.handle(event);
+}
+
+void Window::setPushedInputOnly(bool on) {
+    pushedOnly_ = on;
+    if (on) {  // the real cursor is not the run's: it rests off the window until a push moves it
+        syntheticCursor_ = true;
+        cursorX_ = cursorY_ = 1e5;
+    }
+    input_.setGamepadEnabled(!on);
 }
 
 void Window::showCursor(bool visible) {

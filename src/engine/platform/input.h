@@ -34,6 +34,8 @@ public:
     float takeWheel();
     // The first connected gamepad as of now, or null without one
     const Gamepad* gamepad();
+    // Off, gamepad() reports none
+    void setGamepadEnabled(bool on) { padEnabled_ = on; }
 
 private:
     void openGamepad();
@@ -43,6 +45,7 @@ private:
     float mouseY_ = 0;
     float wheel_ = 0;
     SDL_Gamepad* pad_ = nullptr;
+    bool padEnabled_ = true;
     Gamepad state_;
 };
 
