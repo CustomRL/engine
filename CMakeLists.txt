@@ -9,7 +9,8 @@ add_library(engine_core STATIC
     src/engine/assets/pack.cpp
     src/engine/core/arena.cpp
     src/engine/core/fatal.cpp
-    src/engine/core/jobs.cpp)
+    src/engine/core/jobs.cpp
+    src/engine/core/png_write.cpp)
 target_include_directories(engine_core PUBLIC src)
 target_compile_features(engine_core PUBLIC cxx_std_20)
 target_compile_definitions(engine_core PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
