@@ -18,7 +18,10 @@ target_compile_options(engine_core PRIVATE /W4 /permissive-)
 
 add_library(engine STATIC
     src/engine/gpu/buffer.cpp
+    src/engine/gpu/constant_ring.cpp
     src/engine/gpu/device.cpp
+    src/engine/gpu/frame_clock.cpp
+    src/engine/gpu/gpu_profiler.cpp
     src/engine/gpu/sampler.cpp
     src/engine/gpu/shader.cpp
     src/engine/gpu/states.cpp
