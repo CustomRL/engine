@@ -51,6 +51,10 @@ struct Blob {
     const void* data = nullptr;  // null when the id is not in the pack
     uint32_t size = 0;
     uint32_t type = 0;
+
+    // The fixup for an offset from the blob's start, the other way a blob refers to its own parts
+    template <class T>
+    const T* at(uint64_t offset) const { return reinterpret_cast<const T*>(static_cast<const char*>(data) + offset); }
 };
 
 // One mapped pack. open checks the header, the table and every entry's bounds once, so find never checks them again.
