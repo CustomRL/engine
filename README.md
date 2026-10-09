@@ -1,8 +1,7 @@
 # engine
 
 A C++20 game engine for Windows on D3D11. It holds only general parts: window, input, GPU, 2D UI, text, audio, networking,
-assets and the check harness. Anything specific to one game lives in that game's repo. The first game is
-[rl3dclone-native](https://github.com/CustomRL/rl3dclone-native); its `docs/plan.md` holds the roadmap.
+assets and the check harness. Anything specific to one game lives in that game's repo.
 
 ## Build
 
