@@ -7,6 +7,7 @@ find_package(Stb REQUIRED)
 # the core has no window or GPU dependencies, so tools can link it alone
 add_library(engine_core STATIC
     src/engine/assets/pack.cpp
+    src/engine/core/arena.cpp
     src/engine/core/fatal.cpp
     src/engine/core/jobs.cpp)
 target_include_directories(engine_core PUBLIC src)
@@ -36,3 +37,13 @@ target_compile_features(engine PUBLIC cxx_std_20)
 target_compile_definitions(engine PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
 target_compile_options(engine PRIVATE /W4 /permissive-)
 target_link_libraries(engine PUBLIC engine_core SDL3::SDL3 d3d11 dxgi d3dcompiler)
+
+# operator new counting: each exe or DLL that wants its allocations counted links this (a DLL has its own operator new). Off, it only
+# defines allocationCount() as 0.
+option(ENGINE_COUNT_ALLOCS "count operator new calls (debug and dev builds)" ON)
+add_library(engine_alloc_count OBJECT src/engine/core/alloc_count.cpp)
+target_link_libraries(engine_alloc_count PUBLIC engine_core)
+target_compile_options(engine_alloc_count PRIVATE /W4 /permissive-)
+if(ENGINE_COUNT_ALLOCS)
+    target_compile_definitions(engine_alloc_count PUBLIC ENGINE_COUNT_ALLOCS)
+endif()
