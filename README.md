@@ -26,6 +26,7 @@ it defines `NOMINMAX` and `WIN32_LEAN_AND_MEAN` for everything that links it.
 
 ```
 src/engine/core/      fatal errors and the job pool (parallel-for over N items); built alone as engine_core for tools
+src/engine/assets/    the pack format (spec in pack.h) and its loader: memory-mapped, binary search by asset id, no parsing; in engine_core
 src/engine/platform/  the window (SDL3), its input (keys with their press times, mouse motion, the first gamepad) and the clock
 src/engine/gpu/       the D3D11 device, swap chain and depth buffer
 src/engine/render/    debug lines

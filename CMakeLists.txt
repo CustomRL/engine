@@ -6,6 +6,7 @@ find_package(Stb REQUIRED)
 
 # the core has no window or GPU dependencies, so tools can link it alone
 add_library(engine_core STATIC
+    src/engine/assets/pack.cpp
     src/engine/core/fatal.cpp
     src/engine/core/jobs.cpp)
 target_include_directories(engine_core PUBLIC src)
