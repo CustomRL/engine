@@ -29,12 +29,14 @@ add_library(engine STATIC
     src/engine/gpu/buffer.cpp
     src/engine/gpu/constant_ring.cpp
     src/engine/gpu/device.cpp
+    src/engine/gpu/format.cpp
     src/engine/gpu/frame_clock.cpp
     src/engine/gpu/gpu_profiler.cpp
     src/engine/gpu/sampler.cpp
     src/engine/gpu/shader.cpp
     src/engine/gpu/states.cpp
     src/engine/gpu/texture.cpp
+    src/engine/gpu/texture_streamer.cpp
     src/engine/platform/clock.cpp
     src/engine/platform/input.cpp
     src/engine/platform/window.cpp
@@ -61,7 +63,7 @@ if(ENGINE_COUNT_ALLOCS)
     target_compile_definitions(engine_alloc_count PUBLIC ENGINE_COUNT_ALLOCS)
 endif()
 
-add_executable(engine_check checks/engine_check.cpp checks/log_assert_check.cpp)
+add_executable(engine_check checks/engine_check.cpp checks/log_assert_check.cpp checks/streaming_check.cpp)
 target_include_directories(engine_check PRIVATE ${Stb_INCLUDE_DIR})
 target_link_libraries(engine_check PRIVATE engine engine_alloc_count)
 target_compile_options(engine_check PRIVATE /W4 /permissive-)

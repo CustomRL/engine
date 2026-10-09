@@ -82,6 +82,17 @@ void Device::present(bool vsync) {
     check(swapChain_->Present(vsync ? 1 : 0, !vsync && tearing_ ? DXGI_PRESENT_ALLOW_TEARING : 0), "Present");
 }
 
+uint64_t Device::videoMemoryUsage() const {
+    ComPtr<IDXGIDevice> dxgiDevice;
+    ComPtr<IDXGIAdapter> adapter;
+    ComPtr<IDXGIAdapter3> adapter3;
+    DXGI_QUERY_VIDEO_MEMORY_INFO info{};
+    if (FAILED(device_.As(&dxgiDevice)) || FAILED(dxgiDevice->GetAdapter(&adapter)) || FAILED(adapter.As(&adapter3)) ||
+        FAILED(adapter3->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &info)))
+        return 0;
+    return info.CurrentUsage;
+}
+
 UINT Device::swapChainFlags() const {
     return tearing_ ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 }

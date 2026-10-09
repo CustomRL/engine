@@ -1,7 +1,9 @@
 #include "engine/gpu/texture.h"
 
 #include "engine/core/fatal.h"
+#include "engine/gpu/format.h"
 
+#include <algorithm>
 #include <cstring>
 
 using Microsoft::WRL::ComPtr;
@@ -67,24 +69,34 @@ Texture createTextureCube(Device& device, int size, TextureFormat format, const 
 }
 
 Texture createTexture2D(Device& device, int width, int height, DXGI_FORMAT format, const std::vector<MipLevel>& mips) {
+    Texture out = createTexture2D(device, width, height, format, mips.data(), static_cast<int>(mips.size()));
+    if (!out.texture)
+        fatal("CreateTexture2D (mips) failed: %dx%d, format %d, %zu mips", width, height, static_cast<int>(format), mips.size());
+    return out;
+}
+
+Texture createTexture2D(Device& device, int width, int height, DXGI_FORMAT format, const MipLevel* mips, int count) {
+    if (count < 1 || count > D3D11_REQ_MIP_LEVELS)
+        return {};
     D3D11_TEXTURE2D_DESC desc{};
     desc.Width = width;
     desc.Height = height;
-    desc.MipLevels = static_cast<UINT>(mips.size());
+    desc.MipLevels = static_cast<UINT>(count);
     desc.ArraySize = 1;
     desc.Format = format;
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_IMMUTABLE;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    std::vector<D3D11_SUBRESOURCE_DATA> data(mips.size());
-    for (size_t i = 0; i < mips.size(); i++)
+    D3D11_SUBRESOURCE_DATA data[D3D11_REQ_MIP_LEVELS];
+    for (int i = 0; i < count; i++)
         data[i] = {mips[i].data, mips[i].rowPitch, 0};
 
     Texture out;
+    if (FAILED(device.d3d()->CreateTexture2D(&desc, data, &out.texture)))
+        return {};
+    check(device.d3d()->CreateShaderResourceView(out.texture.Get(), nullptr, &out.view), "CreateShaderResourceView (mips)");
     out.width = width;
     out.height = height;
-    check(device.d3d()->CreateTexture2D(&desc, data.data(), &out.texture), "CreateTexture2D (mips)");
-    check(device.d3d()->CreateShaderResourceView(out.texture.Get(), nullptr, &out.view), "CreateShaderResourceView (mips)");
     return out;
 }
 
@@ -182,6 +194,29 @@ std::vector<uint8_t> readBack(Device& device, ID3D11Texture2D* texture) {
         std::memcpy(out.data() + static_cast<size_t>(row) * desc.Width * texel, static_cast<const uint8_t*>(mapped.pData) + row * mapped.RowPitch,
                     desc.Width * texel);
     device.context()->Unmap(staging.Get(), 0);
+    return out;
+}
+
+std::vector<uint8_t> readBackMip(Device& device, ID3D11Texture2D* texture, int mip) {
+    D3D11_TEXTURE2D_DESC desc;
+    texture->GetDesc(&desc);
+    const UINT width = std::max(1u, desc.Width >> mip), height = std::max(1u, desc.Height >> mip);
+    // a staging copy of the whole chain: a staging texture of the mip's own size would be refused for a block-compressed mip under 4x4
+    desc.Usage = D3D11_USAGE_STAGING;
+    desc.BindFlags = 0;
+    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    desc.MiscFlags = 0;
+    ComPtr<ID3D11Texture2D> staging;
+    check(device.d3d()->CreateTexture2D(&desc, nullptr, &staging), "CreateTexture2D (mip staging)");
+    device.context()->CopyResource(staging.Get(), texture);
+
+    const size_t row = rowBytes(desc.Format, width), rows = rowCount(desc.Format, height);
+    D3D11_MAPPED_SUBRESOURCE mapped;
+    check(device.context()->Map(staging.Get(), mip, D3D11_MAP_READ, 0, &mapped), "Map (mip staging)");
+    std::vector<uint8_t> out(row * rows);
+    for (size_t r = 0; r < rows; r++)
+        std::memcpy(out.data() + r * row, static_cast<const uint8_t*>(mapped.pData) + r * mapped.RowPitch, row);
+    device.context()->Unmap(staging.Get(), mip);
     return out;
 }
 

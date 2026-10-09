@@ -4,6 +4,8 @@
 #include <dxgi1_5.h>
 #include <wrl/client.h>
 
+#include <cstdint>
+
 namespace engine::gpu {
 
 class Device {
@@ -24,6 +26,8 @@ public:
     ID3D11DeviceContext* context() const { return context_.Get(); }
     // The window's back buffer, at the size the last beginFrame gave it
     ID3D11RenderTargetView* backBuffer() const { return backBuffer_.Get(); }
+    // Bytes of the adapter's local (video) memory this process uses now, as DXGI reports it; 0 where DXGI can't tell
+    uint64_t videoMemoryUsage() const;
 
 private:
     void createDevice();
