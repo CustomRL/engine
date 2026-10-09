@@ -8,13 +8,21 @@ find_package(Stb REQUIRED)
 add_library(engine_core STATIC
     src/engine/assets/pack.cpp
     src/engine/core/arena.cpp
+    src/engine/core/assert.cpp
     src/engine/core/fatal.cpp
     src/engine/core/jobs.cpp
+    src/engine/core/log.cpp
     src/engine/core/png_write.cpp)
 target_include_directories(engine_core PUBLIC src)
 target_compile_features(engine_core PUBLIC cxx_std_20)
 target_compile_definitions(engine_core PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
 target_compile_options(engine_core PRIVATE /W4 /permissive-)
+
+# asserts and verbose/debug logging (strings included) exist only when this is ON; the perf preset turns it off
+option(ENGINE_DIAGNOSTICS "asserts and verbose/debug logs" ON)
+if(ENGINE_DIAGNOSTICS)
+    target_compile_definitions(engine_core PUBLIC ENGINE_DIAGNOSTICS)
+endif()
 
 add_library(engine STATIC
     src/engine/gpu/buffer.cpp
@@ -52,7 +60,7 @@ if(ENGINE_COUNT_ALLOCS)
     target_compile_definitions(engine_alloc_count PUBLIC ENGINE_COUNT_ALLOCS)
 endif()
 
-add_executable(engine_check checks/engine_check.cpp)
+add_executable(engine_check checks/engine_check.cpp checks/log_assert_check.cpp)
 target_include_directories(engine_check PRIVATE ${Stb_INCLUDE_DIR})
 target_link_libraries(engine_check PRIVATE engine engine_alloc_count)
 target_compile_options(engine_check PRIVATE /W4 /permissive-)

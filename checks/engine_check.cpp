@@ -1,4 +1,4 @@
-// Checks for the engine's core and GPU utilities: arena, pool, allocation counter, PNG writer, constant ring, GPU profiler, frame
+// Checks for the engine's core and GPU utilities: arena, pool, allocation counter, logging and asserts, PNG writer, constant ring, GPU profiler, frame
 // clock. Exits 0 when every check passes; a failure names its line and exits 1. Needs a D3D11 GPU (no window).
 #include "engine/core/arena.h"
 #include "engine/core/fatal.h"
@@ -28,6 +28,9 @@
     } while (0)
 
 using namespace engine;
+
+[[noreturn]] void assertChild(const char* logPath);
+void logAndAssertChecks(const char* self);
 
 static void arenaAndPool() {
     Arena arena(1 << 20);
@@ -244,9 +247,12 @@ static void gpuTimers(gpu::Device& device) {
     std::printf("gpu profiler, frame clock: ok (%ld profiled frames, last gpu frame %.3f ms)\n", profiler.frames(), clock.times().gpuMs);
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc == 3 && !std::strcmp(argv[1], "--assert-fail"))
+        assertChild(argv[2]);
     arenaAndPool();
     allocationCounter();
+    logAndAssertChecks(argv[0]);
     png();
     gpu::Device device;
     constantRing(device);
