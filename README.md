@@ -25,9 +25,15 @@ it defines `NOMINMAX` and `WIN32_LEAN_AND_MEAN` for everything that links it.
 ## Layout
 
 ```
-src/engine/core/      fatal errors and the job pool (parallel-for over N items); built alone as engine_core for tools
+src/engine/core/      fatal errors, the job pool (parallel-for over N items), linear arenas and fixed pools, the operator new counter
+                      (alloc_count.cpp, an object library each exe and DLL links to count its own) and the PNG writer; built alone as
+                      engine_core for tools
 src/engine/assets/    the pack format (spec in pack.h) and its loader: memory-mapped, binary search by asset id, no parsing; in engine_core
 src/engine/platform/  the window (SDL3), its input (keys with their press times, mouse motion, the first gamepad) and the clock
-src/engine/gpu/       the D3D11 device, swap chain and depth buffer
+src/engine/gpu/       the D3D11 device, swap chain and depth buffer, the per-draw constant ring, the per-pass GPU profiler and the CPU/GPU
+                      frame clock
 src/engine/render/    debug lines
+checks/               engine_check: arena, pool, allocation counter, PNG writer, constant ring, GPU profiler, frame clock
 ```
+
+`ENGINE_COUNT_ALLOCS` (CMake option, on by default) turns the operator new counter on; a shipping build turns it off.

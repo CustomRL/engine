@@ -51,3 +51,8 @@ target_compile_options(engine_alloc_count PRIVATE /W4 /permissive-)
 if(ENGINE_COUNT_ALLOCS)
     target_compile_definitions(engine_alloc_count PUBLIC ENGINE_COUNT_ALLOCS)
 endif()
+
+add_executable(engine_check checks/engine_check.cpp)
+target_include_directories(engine_check PRIVATE ${Stb_INCLUDE_DIR})
+target_link_libraries(engine_check PRIVATE engine engine_alloc_count)
+target_compile_options(engine_check PRIVATE /W4 /permissive-)
