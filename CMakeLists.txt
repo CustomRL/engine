@@ -54,6 +54,14 @@ target_compile_definitions(engine PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
 target_compile_options(engine PRIVATE /W4 /permissive-)
 target_link_libraries(engine PUBLIC engine_core SDL3::SDL3 d3d11 dxgi d3dcompiler)
 
+# Bullet 2.82 (zlib, third_party/bullet): the physics RL uses. Its own warnings are off on this target only; code that includes it goes
+# through engine/physics/bullet.h, which silences them around the includes. /fp:precise keeps float math in source order like the exe.
+file(GLOB_RECURSE ENGINE_BULLET_SOURCES CONFIGURE_DEPENDS third_party/bullet/src/*.cpp)
+add_library(engine_bullet STATIC ${ENGINE_BULLET_SOURCES})
+target_include_directories(engine_bullet PUBLIC third_party/bullet/src src)
+target_compile_definitions(engine_bullet PUBLIC BT_NO_PROFILE=1)
+target_compile_options(engine_bullet PRIVATE /W0 /fp:precise)
+
 # operator new counting: each exe or DLL that wants its allocations counted links this (a DLL has its own operator new). Off, it only
 # defines allocationCount() as 0.
 option(ENGINE_COUNT_ALLOCS "count operator new calls (debug and dev builds)" ON)

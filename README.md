@@ -35,6 +35,8 @@ src/engine/gpu/       the D3D11 device, swap chain and depth buffer, the per-dra
                       frame clock; immutable textures and buffers from bytes (BC formats as given), mip readback, and the texture
                       streamer (low mips at load, more on request from a worker thread, under a budget of GPU bytes)
 src/engine/render/    debug lines
+src/engine/physics/   bullet.h: the Bullet headers with their warnings silenced; Bullet 2.82 itself (zlib, third_party/bullet, with Rocket
+                      League's solver changes marked in each altered file) builds as engine_bullet
 checks/               engine_check: arena, pool, allocation counter, PNG writer, constant ring, GPU profiler, frame clock, texture
                       formats, pack sets, texture streamer
 ```
