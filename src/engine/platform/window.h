@@ -5,6 +5,7 @@
 #include <vector>
 
 struct SDL_Window;
+union SDL_Event;
 
 namespace engine {
 
@@ -39,6 +40,11 @@ public:
     void pushKey(int scancode, bool down);
     // On, pump drops what the user does (keys, mouse, focus changes, pads), so a run sees only what the push calls give it
     void setPushedInputOnly(bool on);
+    // A tool layer over the window (an immediate-mode UI): pump hands it each event before input() gets it, and an event it returns true
+    // for input() never sees. Not called while pushed input only is on. Null removes it.
+    using EventHook = bool (*)(void* user, const SDL_Event& event);
+    void setEventHook(EventHook hook, void* user) { hook_ = hook, hookUser_ = user; }
+    SDL_Window* sdl() const { return window_; }
     void setTitle(const char* title);
     // The sizes in pixels the window's display offers as fullscreen modes, each once, smallest first
     std::vector<DisplaySize> displayModes() const;
@@ -57,6 +63,8 @@ private:
     bool cursorShown_ = true;
     bool syntheticCursor_ = false, pushedMove_ = false, pushedOnly_ = false;
     float cursorX_ = 0, cursorY_ = 0;  // the synthetic cursor, in the window's units
+    EventHook hook_ = nullptr;
+    void* hookUser_ = nullptr;
 };
 
 }

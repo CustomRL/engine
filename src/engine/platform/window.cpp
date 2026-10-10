@@ -33,7 +33,7 @@ bool Window::pump() {
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_QUIT)
             return false;
-        if (!pushedOnly_)
+        if (!pushedOnly_ && !(hook_ && hook_(hookUser_, event)))
             input_.handle(event);
     }
     return true;
