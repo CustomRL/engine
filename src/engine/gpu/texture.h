@@ -54,11 +54,13 @@ Texture createTexture2D(Device& device, int width, int height, DXGI_FORMAT forma
 // The same from count levels (at most D3D11's 15), with no allocation outside the driver. Null texture and view when the device refuses
 // the description (a block-compressed top level whose size isn't a multiple of 4, say)
 Texture createTexture2D(Device& device, int width, int height, DXGI_FORMAT format, const MipLevel* mips, int count);
+// The same with faces 1 (2D) or 6 (a cube: +X -X +Y -Y +Z -Z, square), mips face-major: count levels of face 0, then of face 1, ...
+Texture createTexture(Device& device, int width, int height, DXGI_FORMAT format, const MipLevel* mips, int count, int faces);
 
 // A 2D texture's top level copied back to the CPU, top row first, rows packed tightly
 std::vector<uint8_t> readBack(Device& device, ID3D11Texture2D* texture);
-// One mip of a 2D texture whose format format.h sizes, copied back to the CPU with rows (of texels, or of 4x4 blocks) packed tightly: for a
-// texture made from bytes laid out that way, those bytes
-std::vector<uint8_t> readBackMip(Device& device, ID3D11Texture2D* texture, int mip);
+// One mip of a 2D texture (or of a cube's face) whose format format.h sizes, copied back to the CPU with rows (of texels, or of 4x4
+// blocks) packed tightly: for a texture made from bytes laid out that way, those bytes
+std::vector<uint8_t> readBackMip(Device& device, ID3D11Texture2D* texture, int mip, int face = 0);
 
 }

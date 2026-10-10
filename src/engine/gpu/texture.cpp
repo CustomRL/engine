@@ -76,19 +76,24 @@ Texture createTexture2D(Device& device, int width, int height, DXGI_FORMAT forma
 }
 
 Texture createTexture2D(Device& device, int width, int height, DXGI_FORMAT format, const MipLevel* mips, int count) {
-    if (count < 1 || count > D3D11_REQ_MIP_LEVELS)
+    return createTexture(device, width, height, format, mips, count, 1);
+}
+
+Texture createTexture(Device& device, int width, int height, DXGI_FORMAT format, const MipLevel* mips, int count, int faces) {
+    if (count < 1 || count > D3D11_REQ_MIP_LEVELS || (faces != 1 && faces != 6))
         return {};
     D3D11_TEXTURE2D_DESC desc{};
     desc.Width = width;
     desc.Height = height;
     desc.MipLevels = static_cast<UINT>(count);
-    desc.ArraySize = 1;
+    desc.ArraySize = static_cast<UINT>(faces);
     desc.Format = format;
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_IMMUTABLE;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    D3D11_SUBRESOURCE_DATA data[D3D11_REQ_MIP_LEVELS];
-    for (int i = 0; i < count; i++)
+    desc.MiscFlags = faces == 6 ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;
+    D3D11_SUBRESOURCE_DATA data[6 * D3D11_REQ_MIP_LEVELS];  // subresource order: face-major, as mips is
+    for (int i = 0; i < count * faces; i++)
         data[i] = {mips[i].data, mips[i].rowPitch, 0};
 
     Texture out;
@@ -197,7 +202,7 @@ std::vector<uint8_t> readBack(Device& device, ID3D11Texture2D* texture) {
     return out;
 }
 
-std::vector<uint8_t> readBackMip(Device& device, ID3D11Texture2D* texture, int mip) {
+std::vector<uint8_t> readBackMip(Device& device, ID3D11Texture2D* texture, int mip, int face) {
     D3D11_TEXTURE2D_DESC desc;
     texture->GetDesc(&desc);
     const UINT width = std::max(1u, desc.Width >> mip), height = std::max(1u, desc.Height >> mip);
@@ -211,12 +216,13 @@ std::vector<uint8_t> readBackMip(Device& device, ID3D11Texture2D* texture, int m
     device.context()->CopyResource(staging.Get(), texture);
 
     const size_t row = rowBytes(desc.Format, width), rows = rowCount(desc.Format, height);
+    const UINT sub = D3D11CalcSubresource(mip, face, desc.MipLevels);
     D3D11_MAPPED_SUBRESOURCE mapped;
-    check(device.context()->Map(staging.Get(), mip, D3D11_MAP_READ, 0, &mapped), "Map (mip staging)");
+    check(device.context()->Map(staging.Get(), sub, D3D11_MAP_READ, 0, &mapped), "Map (mip staging)");
     std::vector<uint8_t> out(row * rows);
     for (size_t r = 0; r < rows; r++)
         std::memcpy(out.data() + r * row, static_cast<const uint8_t*>(mapped.pData) + r * mapped.RowPitch, row);
-    device.context()->Unmap(staging.Get(), mip);
+    device.context()->Unmap(staging.Get(), sub);
     return out;
 }
 
