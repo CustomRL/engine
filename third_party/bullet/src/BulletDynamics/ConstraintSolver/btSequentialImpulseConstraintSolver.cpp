@@ -803,6 +803,24 @@ void btSequentialImpulseConstraintSolver::setFrictionConstraintImpulse( btSolver
 
 
 
+static void rlAccumulateContact(btRigidBody& body, const btManifoldPoint& cp, const btVector3& rel_pos)
+{
+	body.m_rlContactCount++;
+	body.m_rlContact.m_combinedFriction += cp.m_combinedFriction;
+	body.m_rlContact.m_combinedRestitution += cp.m_combinedRestitution;
+	body.m_rlContact.m_normalWorldOnB += cp.m_normalWorldOnB;
+	body.m_rlContactRadius += rel_pos.length();
+}
+
+// RL (1402bcb20) sums a point's velocity as (w x r + v) + external force impulse, where stock
+// getVelocityInLocalPointNoDelta sums v + external + w x r
+static btVector3 rlVelocityInLocalPointNoDelta(const btSolverBody& body, const btVector3& rel_pos)
+{
+	if (!body.m_originalBody)
+		return btVector3(0,0,0);
+	return (body.m_angularVelocity+body.m_externalTorqueImpulse).cross(rel_pos) + body.m_linearVelocity + body.m_externalForceImpulse;
+}
+
 void	btSequentialImpulseConstraintSolver::convertContact(btPersistentManifold* manifold,const btContactSolverInfo& infoGlobal)
 {
 	btCollisionObject* colObj0=0,*colObj1=0;
@@ -853,61 +871,35 @@ void	btSequentialImpulseConstraintSolver::convertContact(btPersistentManifold* m
 			rel_pos1 = pos1 - colObj0->getWorldTransform().getOrigin(); 
 			rel_pos2 = pos2 - colObj1->getWorldTransform().getOrigin();
 
-			btVector3 vel1;// = rb0 ? rb0->getVelocityInLocalPoint(rel_pos1) : btVector3(0,0,0);
-			btVector3 vel2;// = rb1 ? rb1->getVelocityInLocalPoint(rel_pos2) : btVector3(0,0,0);
-
-			solverBodyA->getVelocityInLocalPointNoDelta(rel_pos1,vel1);
-			solverBodyB->getVelocityInLocalPointNoDelta(rel_pos2,vel2 );
-			
-			btVector3 vel  = vel1 - vel2;
-			btScalar rel_vel = cp.m_normalWorldOnB.dot(vel);
-
 			setupContactConstraint(solverConstraint, solverBodyIdA, solverBodyIdB, cp, infoGlobal, relaxation, rel_pos1, rel_pos2);
 
+			// RL (1402b3220): a point the contact-added callback flagged gets no friction; each rigid body side instead adds it to
+			// its averaged contact (friction, restitution and normal sums, the distance from its centre, the count)
+			if (!cp.m_rlAveraged)
+			{
+				rlSetupContactFriction(solverConstraint, solverBodyIdA, solverBodyIdB, frictionIndex, cp, rel_pos1, rel_pos2, colObj0, colObj1, relaxation, infoGlobal);
+			} else
+			{
+				if (rb0)
+					rlAccumulateContact(*rb0, cp, rel_pos1);
+				if (rb1)
+					rlAccumulateContact(*rb1, cp, rel_pos2);
+			}
+		
+
 			
 
-//			const btVector3& pos1 = cp.getPositionWorldOnA();
-//			const btVector3& pos2 = cp.getPositionWorldOnB();
+		}
+	}
+}
 
-			/////setup the friction constraints
-
+// RL (1402bcb20): stock convertContact's friction code without the rolling friction, shared with the averaged contact
+void btSequentialImpulseConstraintSolver::rlSetupContactFriction(btSolverConstraint& solverConstraint, int solverBodyIdA, int solverBodyIdB, int frictionIndex,
+																  btManifoldPoint& cp, const btVector3& rel_pos1, const btVector3& rel_pos2,
+																  btCollisionObject* colObj0, btCollisionObject* colObj1, btScalar relaxation,
+																  const btContactSolverInfo& infoGlobal)
+{
 			solverConstraint.m_frictionIndex = m_tmpSolverContactFrictionConstraintPool.size();
-
-			btVector3 angVelA(0,0,0),angVelB(0,0,0);
-			if (rb0)
-				angVelA = rb0->getAngularVelocity();
-			if (rb1)
-				angVelB = rb1->getAngularVelocity();
-			btVector3 relAngVel = angVelB-angVelA;
-
-			if ((cp.m_combinedRollingFriction>0.f) && (rollingFriction>0))
-			{
-				//only a single rollingFriction per manifold
-				rollingFriction--;
-				if (relAngVel.length()>infoGlobal.m_singleAxisRollingFrictionThreshold)
-				{
-					relAngVel.normalize();
-					applyAnisotropicFriction(colObj0,relAngVel,btCollisionObject::CF_ANISOTROPIC_ROLLING_FRICTION);
-					applyAnisotropicFriction(colObj1,relAngVel,btCollisionObject::CF_ANISOTROPIC_ROLLING_FRICTION);
-					if (relAngVel.length()>0.001)
-						addRollingFrictionConstraint(relAngVel,solverBodyIdA,solverBodyIdB,frictionIndex,cp,rel_pos1,rel_pos2,colObj0,colObj1, relaxation);
-
-				} else
-				{
-					addRollingFrictionConstraint(cp.m_normalWorldOnB,solverBodyIdA,solverBodyIdB,frictionIndex,cp,rel_pos1,rel_pos2,colObj0,colObj1, relaxation);
-					btVector3 axis0,axis1;
-					btPlaneSpace1(cp.m_normalWorldOnB,axis0,axis1);
-					applyAnisotropicFriction(colObj0,axis0,btCollisionObject::CF_ANISOTROPIC_ROLLING_FRICTION);
-					applyAnisotropicFriction(colObj1,axis0,btCollisionObject::CF_ANISOTROPIC_ROLLING_FRICTION);
-					applyAnisotropicFriction(colObj0,axis1,btCollisionObject::CF_ANISOTROPIC_ROLLING_FRICTION);
-					applyAnisotropicFriction(colObj1,axis1,btCollisionObject::CF_ANISOTROPIC_ROLLING_FRICTION);
-					if (axis0.length()>0.001)
-						addRollingFrictionConstraint(axis0,solverBodyIdA,solverBodyIdB,frictionIndex,cp,rel_pos1,rel_pos2,colObj0,colObj1, relaxation);
-					if (axis1.length()>0.001)
-						addRollingFrictionConstraint(axis1,solverBodyIdA,solverBodyIdB,frictionIndex,cp,rel_pos1,rel_pos2,colObj0,colObj1, relaxation);
-		
-				}
-			}
 
 			///Bullet has several options to set the friction directions
 			///By default, each contact has only a single friction direction that is recomputed automatically very frame 
@@ -926,6 +918,8 @@ void	btSequentialImpulseConstraintSolver::convertContact(btPersistentManifold* m
 			///
 			if (!(infoGlobal.m_solverMode & SOLVER_ENABLE_FRICTION_DIRECTION_CACHING) || !cp.m_lateralFrictionInitialized)
 			{
+			btVector3 vel = rlVelocityInLocalPointNoDelta(m_tmpSolverBodyPool[solverBodyIdA], rel_pos1) - rlVelocityInLocalPointNoDelta(m_tmpSolverBodyPool[solverBodyIdB], rel_pos2);
+			btScalar rel_vel = cp.m_normalWorldOnB.dot(vel);
 				cp.m_lateralFrictionDir1 = vel - cp.m_normalWorldOnB * rel_vel;
 				btScalar lat_rel_vel = cp.m_lateralFrictionDir1.length2();
 				if (!(infoGlobal.m_solverMode & SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION) && lat_rel_vel > SIMD_EPSILON)
@@ -975,12 +969,39 @@ void	btSequentialImpulseConstraintSolver::convertContact(btPersistentManifold* m
 
 			}
 			setFrictionConstraintImpulse( solverConstraint, solverBodyIdA, solverBodyIdB, cp, infoGlobal);
-		
+}
 
-			
-
-		}
+// RL (1402b6f30): the fixed solver body, as getOrInitSolverBody makes it for a static object
+int btSequentialImpulseConstraintSolver::rlFixedSolverBody(btScalar timeStep)
+{
+	if (m_fixedBodyId<0)
+	{
+		m_fixedBodyId = m_tmpSolverBodyPool.size();
+		btSolverBody& fixedBody = m_tmpSolverBodyPool.expand();
+		initSolverBody(&fixedBody,0,timeStep);
 	}
+	return m_fixedBodyId;
+}
+
+// RL (1402b2e90): one contact for a body's averaged points, against the fixed body, at the averaged distance back along the
+// averaged normal, with zero penetration
+void btSequentialImpulseConstraintSolver::rlAddAveragedContact(btRigidBody& body, const btContactSolverInfo& infoGlobal)
+{
+	int solverBodyIdA = getOrInitSolverBody(body,infoGlobal.m_timeStep);
+	if (m_tmpSolverBodyPool[solverBodyIdA].m_invMass.isZero())
+		return;
+	int solverBodyIdB = rlFixedSolverBody(infoGlobal.m_timeStep);
+	btManifoldPoint& cp = body.m_rlContact;
+	int frictionIndex = m_tmpSolverContactConstraintPool.size();
+	btSolverConstraint& solverConstraint = m_tmpSolverContactConstraintPool.expandNonInitializing();
+	solverConstraint.m_solverBodyIdA = solverBodyIdA;
+	solverConstraint.m_solverBodyIdB = solverBodyIdB;
+	solverConstraint.m_originalContactPoint = &cp;
+	btVector3 rel_pos1 = -cp.m_normalWorldOnB*body.m_rlContactRadius;
+	btVector3 rel_pos2(0,0,0);
+	btScalar relaxation;
+	setupContactConstraint(solverConstraint, solverBodyIdA, solverBodyIdB, cp, infoGlobal, relaxation, rel_pos1, rel_pos2);
+	rlSetupContactFriction(solverConstraint, solverBodyIdA, solverBodyIdB, frictionIndex, cp, rel_pos1, rel_pos2, &body, 0, relaxation, infoGlobal);
 }
 
 void btSequentialImpulseConstraintSolver::convertContacts(btPersistentManifold** manifoldPtr,int numManifolds, const btContactSolverInfo& infoGlobal)
@@ -1103,6 +1124,12 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(btCol
 				gyroForce = body->computeGyroscopicForce(infoGlobal.m_maxGyroscopicForce);
 				solverBody.m_externalTorqueImpulse -= gyroForce*body->getInvInertiaTensorWorld()*infoGlobal.m_timeStep;
 			}
+			// RL (1402bed40): the averaged contact starts empty each step
+			body->m_rlContact = btManifoldPoint(btVector3(0,0,0),btVector3(0,0,0),btVector3(0,0,0),0);
+			body->m_rlContact.m_positionWorldOnA.setZero();
+			body->m_rlContact.m_positionWorldOnB.setZero();
+			body->m_rlContactRadius = 0;
+			body->m_rlContactCount = 0;
 		}
 	}
 	
@@ -1304,6 +1331,23 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(btCol
 
 		convertContacts(manifoldPtr,numManifolds,infoGlobal);
 
+		// RL (1402bed40): average each rigid body's flagged points and add their single contact
+		for (int i=0;i<numBodies;i++)
+		{
+			btRigidBody* body = btRigidBody::upcast(bodies[i]);
+			if (!body || body->m_rlContactCount <= 0)
+				continue;
+			if (body->m_rlContactCount > 1)
+			{
+				btScalar inv = btScalar(1)/btScalar(body->m_rlContactCount);
+				body->m_rlContactCount = 1;
+				body->m_rlContact.m_combinedFriction = inv*body->m_rlContact.m_combinedFriction;
+				body->m_rlContact.m_combinedRestitution = inv*body->m_rlContact.m_combinedRestitution;
+				body->m_rlContact.m_normalWorldOnB *= btScalar(1)/body->m_rlContact.m_normalWorldOnB.length();
+				body->m_rlContactRadius = inv*body->m_rlContactRadius;
+			}
+			rlAddAveragedContact(*body, infoGlobal);
+		}
 	}
 
 //	btContactSolverInfo info = infoGlobal;
@@ -1539,6 +1583,10 @@ btScalar btSequentialImpulseConstraintSolver::solveSingleIteration(int iteration
 			for (int j=0;j<numPoolConstraints;j++)
 			{
 				const btSolverConstraint& solveManifold = m_tmpSolverContactConstraintPool[m_orderTmpConstraintPool[j]];
+				// RL (1402c18b6): a point folded into its body's averaged contact gets no velocity impulse of its own
+				// (the split-impulse pass still solves it)
+				if (solveManifold.m_rlAveraged)
+					continue;
 				resolveSingleConstraintRowLowerLimit(m_tmpSolverBodyPool[solveManifold.m_solverBodyIdA],m_tmpSolverBodyPool[solveManifold.m_solverBodyIdB],solveManifold);
 			}
 			///solve all friction constraints

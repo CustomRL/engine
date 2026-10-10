@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): the m_rl members are set up, and applyDamping clamps to RL's speed caps.
+
 #include "btRigidBody.h"
 #include "BulletCollision/CollisionShapes/btConvexShape.h"
 #include "LinearMath/btMinMax.h"
@@ -58,6 +60,10 @@ void	btRigidBody::setupRigidBody(const btRigidBody::btRigidBodyConstructionInfo&
 	m_optionalMotionState = constructionInfo.m_motionState;
 	m_contactSolverType = 0;
 	m_frictionSolverType = 0;
+	m_rlContactRadius = 0;
+	m_rlContactCount = 0;
+	m_rlMaxLinearSpeed = 0;
+	m_rlMaxAngularSpeed = 0;
 	m_additionalDamping = constructionInfo.m_additionalDamping;
 	m_additionalDampingFactor = constructionInfo.m_additionalDampingFactor;
 	m_additionalLinearDampingThresholdSqr = constructionInfo.m_additionalLinearDampingThresholdSqr;
@@ -162,6 +168,12 @@ void			btRigidBody::applyDamping(btScalar timeStep)
 	//todo: do some performance comparisons (but other parts of the engine are probably bottleneck anyway
 
 //#define USE_OLD_DAMPING_METHOD 1
+	// RL (1402c2ea0): a velocity over its cap is scaled down to it first
+	if (m_rlMaxLinearSpeed > 0 && m_rlMaxLinearSpeed*m_rlMaxLinearSpeed < m_linearVelocity.length2())
+		m_linearVelocity = m_linearVelocity * (btScalar(1)/m_linearVelocity.length()) * m_rlMaxLinearSpeed;
+	if (m_rlMaxAngularSpeed > 0 && m_rlMaxAngularSpeed*m_rlMaxAngularSpeed < m_angularVelocity.length2())
+		m_angularVelocity = m_angularVelocity * (btScalar(1)/m_angularVelocity.length()) * m_rlMaxAngularSpeed;
+
 #ifdef USE_OLD_DAMPING_METHOD
 	m_linearVelocity *= GEN_clamped((btScalar(1.) - timeStep * m_linearDamping), (btScalar)btScalar(0.0), (btScalar)btScalar(1.0));
 	m_angularVelocity *= GEN_clamped((btScalar(1.) - timeStep * m_angularDamping), (btScalar)btScalar(0.0), (btScalar)btScalar(1.0));

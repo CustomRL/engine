@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): the rl helpers for averaged contacts.
+
 #ifndef BT_SEQUENTIAL_IMPULSE_CONSTRAINT_SOLVER_H
 #define BT_SEQUENTIAL_IMPULSE_CONSTRAINT_SOLVER_H
 
@@ -74,6 +76,14 @@ protected:
 	virtual void convertContacts(btPersistentManifold** manifoldPtr, int numManifolds, const btContactSolverInfo& infoGlobal);
 
 	void	convertContact(btPersistentManifold* manifold,const btContactSolverInfo& infoGlobal);
+
+	// RL: the friction half of convertContact (1402bcb20), the averaged contact (1402b2e90) and the fixed solver body (1402b6f30)
+	void	rlSetupContactFriction(btSolverConstraint& solverConstraint, int solverBodyIdA, int solverBodyIdB, int frictionIndex,
+								   btManifoldPoint& cp, const btVector3& rel_pos1, const btVector3& rel_pos2,
+								   btCollisionObject* colObj0, btCollisionObject* colObj1, btScalar relaxation,
+								   const btContactSolverInfo& infoGlobal);
+	void	rlAddAveragedContact(btRigidBody& body, const btContactSolverInfo& infoGlobal);
+	int		rlFixedSolverBody(btScalar timeStep);
 
 
 	void	resolveSplitPenetrationSIMD(

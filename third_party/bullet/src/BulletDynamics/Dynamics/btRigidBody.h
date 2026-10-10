@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): the m_rl members (averaged contact and speed caps).
+
 #ifndef BT_RIGIDBODY_H
 #define BT_RIGIDBODY_H
 
@@ -20,6 +22,7 @@ subject to the following restrictions:
 #include "LinearMath/btTransform.h"
 #include "BulletCollision/BroadphaseCollision/btBroadphaseProxy.h"
 #include "BulletCollision/CollisionDispatch/btCollisionObject.h"
+#include "BulletCollision/NarrowPhaseCollision/btManifoldPoint.h"
 
 class btCollisionShape;
 class btMotionState;
@@ -483,6 +486,17 @@ public:
 	//for experimental overriding of friction/contact solver func
 	int	m_contactSolverType;
 	int	m_frictionSolverType;
+
+	// RL: the body's averaged contact (+0x250), the summed distance from its centre to the averaged points (+0x360) and their count
+	// (+0x364). solveGroupCacheFriendlySetup (1402bed40) resets them, convertContact (1402b3220) sums the points the contact-added
+	// callback flagged, and setup then averages them into one contact against the fixed body (1402b2e90).
+	btManifoldPoint	m_rlContact;
+	btScalar	m_rlContactRadius;
+	int		m_rlContactCount;
+	// RL: speed caps applyDamping (1402c2ea0) clamps to before damping, from construction info [0x28] and [0x29] (setupRigidBody,
+	// FUN_1402c4fb0, +0x368 and +0x36c); 0 means no cap
+	btScalar	m_rlMaxLinearSpeed;
+	btScalar	m_rlMaxAngularSpeed;
 
 	void	setAngularFactor(const btVector3& angFac)
 	{
