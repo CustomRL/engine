@@ -10,7 +10,7 @@
 
 namespace engine::gpu {
 
-// One mip as its source holds it (a mapped pack blob, say), rows of texels or of 4x4 blocks packed tightly
+// One mip as its source holds it (a mapped pack blob, say), rows of texels or of 4x4 blocks packed tightly; for a cube, of one face
 struct SourceMip {
     const void* data;
     uint32_t size, width, height;
@@ -34,8 +34,9 @@ public:
     TextureStreamer& operator=(const TextureStreamer&) = delete;
 
     // A texture from its chain, top first, every mip with data (at most 15), its low mips loaded now. Returns its handle, or ~0u when
-    // the device refuses the chain; fatal past capacity.
-    uint32_t add(DXGI_FORMAT format, const SourceMip* mips, int count);
+    // the device refuses the chain; fatal past capacity. faces 6 makes a cube (+X -X +Y -Y +Z -Z): mips then holds count mips of each
+    // face in turn, every face's chain the same sizes, and a request moves the top of all six.
+    uint32_t add(DXGI_FORMAT format, const SourceMip* mips, int count, int faces = 1);
 
     enum class Request { Queued, Resident, Pending, OverBudget, Invalid };
     Request request(uint32_t t, int top);
@@ -59,8 +60,8 @@ public:
 private:
     struct Slot {
         DXGI_FORMAT format;
-        int count;
-        SourceMip mips[D3D11_REQ_MIP_LEVELS];
+        int count, faces;
+        SourceMip mips[6 * D3D11_REQ_MIP_LEVELS];  // face-major
         Texture current, next;
         int top, nextTop;
         uint64_t bytes, nextBytes;

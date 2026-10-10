@@ -29,7 +29,7 @@ uint64_t TextureStreamer::chainBytes(uint32_t t, int top) const {
     uint64_t bytes = 0;
     for (int i = top; i < s.count; i++)
         bytes += mipBytes(s.format, s.mips[i].width, s.mips[i].height);
-    return bytes;
+    return bytes * s.faces;
 }
 
 bool TextureStreamer::validTop(uint32_t t, int top) const {
@@ -38,24 +38,30 @@ bool TextureStreamer::validTop(uint32_t t, int top) const {
 }
 
 Texture TextureStreamer::make(const Slot& s, int top) const {
-    MipLevel levels[D3D11_REQ_MIP_LEVELS];
-    for (int i = top; i < s.count; i++)
-        levels[i - top] = {s.mips[i].data, rowBytes(s.format, s.mips[i].width)};
-    return createTexture2D(device_, s.mips[top].width, s.mips[top].height, s.format, levels, s.count - top);
+    MipLevel levels[6 * D3D11_REQ_MIP_LEVELS];
+    const int n = s.count - top;
+    for (int f = 0; f < s.faces; f++)
+        for (int i = top; i < s.count; i++) {
+            const SourceMip& m = s.mips[f * s.count + i];
+            levels[f * n + i - top] = {m.data, rowBytes(s.format, m.width)};
+        }
+    return createTexture(device_, s.mips[top].width, s.mips[top].height, s.format, levels, n, s.faces);
 }
 
-uint32_t TextureStreamer::add(DXGI_FORMAT format, const SourceMip* mips, int count) {
+uint32_t TextureStreamer::add(DXGI_FORMAT format, const SourceMip* mips, int count, int faces) {
     if (stats_.textures == capacity_)
         fatal("TextureStreamer: more than %u textures", capacity_);
-    if (count < 1 || count > D3D11_REQ_MIP_LEVELS)
+    if (count < 1 || count > D3D11_REQ_MIP_LEVELS || (faces != 1 && faces != 6))
         return ~0u;
     const uint32_t t = stats_.textures;
     Slot& s = slots_[t];
     s.format = format;
     s.count = count;
-    std::copy(mips, mips + count, s.mips);
-    for (uint32_t i = 0; i < uint32_t(count); i++)
-        if (rowBytes(format, mips[i].width) == 0 || mips[i].size != mipBytes(format, mips[i].width, mips[i].height))
+    s.faces = faces;
+    std::copy(mips, mips + count * faces, s.mips);
+    for (int i = 0; i < count * faces; i++)
+        if (rowBytes(format, mips[i].width) == 0 || mips[i].size != mipBytes(format, mips[i].width, mips[i].height) ||
+            mips[i].width != mips[i % count].width || mips[i].height != mips[i % count].height)
             return ~0u;
     int top = count - 1;
     while (top > 0 && std::max(mips[top - 1].width, mips[top - 1].height) <= loadSize_)

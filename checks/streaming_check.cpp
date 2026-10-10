@@ -124,6 +124,25 @@ static void streamer(gpu::Device& device) {
     CHECK(s.stats().peak <= s.stats().budget && s.stats().streamed == 3 && s.stats().requests == 4 && s.stats().failed == 0);
     std::printf("texture streamer: ok (peak %llu of %llu bytes, %.3f ms a stream)\n", static_cast<unsigned long long>(s.stats().peak),
                 static_cast<unsigned long long>(s.stats().budget), s.stats().streamSeconds * 1e3 / s.stats().streamed);
+
+    // a cube: six faces of 128x128 BC1, 8 mips each, from slices of the random bytes above; 64x64 and down at once, then all
+    gpu::SourceMip faces[6 * 8];
+    for (int f = 0; f < 6; f++)
+        for (int i = 0; i < 8; i++)
+            faces[f * 8 + i] = {mips[f & 1][i + 1].data, mips[f & 1][i + 1].size, 128u >> i, 128u >> i};
+    TextureStreamer cube(device, ~0ull, 1);
+    CHECK(cube.add(DXGI_FORMAT_BC1_UNORM, faces, 8, 6) == 0 && cube.residentTop(0) == 1);
+    CHECK(cube.stats().resident == cube.chainBytes(0, 1) && cube.chainBytes(0, 1) == 6 * low);
+    CHECK(cube.request(0, 0) == TextureStreamer::Request::Queued);
+    cube.finish();
+    bool same = cube.residentTop(0) == 0;
+    for (int f = 0; same && f < 6; f++)
+        for (int i = 0; same && i < 8; i++) {
+            const auto back = gpu::readBackMip(device, cube.texture(0), i, f);
+            same = back.size() == faces[f * 8 + i].size && !std::memcmp(back.data(), faces[f * 8 + i].data, back.size());
+        }
+    CHECK(same);
+    std::printf("texture streamer cube: ok\n");
 }
 
 void streamingChecks(gpu::Device& device) {
