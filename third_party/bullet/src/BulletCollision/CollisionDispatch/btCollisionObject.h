@@ -92,11 +92,10 @@ protected:
 	int				m_internalType;
 
 	///users can point to their objects, m_userPointer is not used by Bullet, see setUserPointer/getUserPointer
-	union
-	{
-		void*			m_userObjectPointer;
-		int	m_userIndex;
-	};
+	// RL (rl-direct-clone roadmap 10.4): a separate index, as Bullet 2.83 made it; in 2.82 it shared a union with the
+	// pointer, so setUserPointer overwrote it
+	void*			m_userObjectPointer;
+	int	m_userIndex;
 
 	///time of impact calculation
 	btScalar		m_hitFraction; 
