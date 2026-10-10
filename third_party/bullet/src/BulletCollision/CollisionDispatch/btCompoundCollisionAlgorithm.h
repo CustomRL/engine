@@ -44,7 +44,16 @@ class btCompoundCollisionAlgorithm  : public btActivatingCollisionAlgorithm
 
 
 	int	m_compoundShapeRevision;//to keep track of changes, so that childAlgorithm array can be updated
-	
+
+	// engine: processCollision's manifold list and tree stack, kept so a tick allocates nothing once they have grown,
+	// and inline storage for them and the child algorithms (the constructor)
+	enum { kInline = 4, kInlineStack = 16 };
+	btAlignedObjectArray<class btPersistentManifold*>	m_manifoldArray;
+	btAlignedObjectArray<const struct btDbvtNode*>	m_stack;
+	btCollisionAlgorithm*	m_childBuffer[kInline];
+	btPersistentManifold*	m_manifoldBuffer[kInline];
+	const btDbvtNode*	m_stackBuffer[kInlineStack];
+
 	void	removeChildAlgorithms();
 	
 	void	preallocateChildAlgorithms(const btCollisionObjectWrapper* body0Wrap,const btCollisionObjectWrapper* body1Wrap);

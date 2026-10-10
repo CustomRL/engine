@@ -325,6 +325,13 @@ struct	btDbvt
 		void		collideTV(	const btDbvtNode* root,
 		const btDbvtVolume& volume,
 		DBVT_IPOLICY) const;
+	// engine: collideTV on the caller's stack, which keeps its capacity, so a per-tick query allocates nothing; the
+	// same traversal order
+	DBVT_PREFIX
+		void		collideTVNoStackAlloc(	const btDbvtNode* root,
+		const btDbvtVolume& volume,
+		btAlignedObjectArray<const btDbvtNode*>& stack,
+		DBVT_IPOLICY) const;
 	///rayTest is a re-entrant ray test, and can be called in parallel as long as the btAlignedAlloc is thread-safe (uses locking etc)
 	///rayTest is slower than rayTestInternal, because it builds a local stack, using memory allocations, and it recomputes signs/rayDirectionInverses each time
 	DBVT_PREFIX
@@ -930,6 +937,37 @@ inline void		btDbvt::collideTV(	const btDbvtNode* root,
 			btAlignedObjectArray<const btDbvtNode*>	stack;
 			stack.resize(0);
 			stack.reserve(SIMPLE_STACKSIZE);
+			stack.push_back(root);
+			do	{
+				const btDbvtNode*	n=stack[stack.size()-1];
+				stack.pop_back();
+				if(Intersect(n->volume,volume))
+				{
+					if(n->isinternal())
+					{
+						stack.push_back(n->childs[0]);
+						stack.push_back(n->childs[1]);
+					}
+					else
+					{
+						policy.Process(n);
+					}
+				}
+			} while(stack.size()>0);
+		}
+}
+
+DBVT_PREFIX
+inline void		btDbvt::collideTVNoStackAlloc(	const btDbvtNode* root,
+								  const btDbvtVolume& vol,
+								  btAlignedObjectArray<const btDbvtNode*>& stack,
+								  DBVT_IPOLICY) const
+{
+	DBVT_CHECKTYPE
+		if(root)
+		{
+			ATTRIBUTE_ALIGNED16(btDbvtVolume)		volume(vol);
+			stack.resize(0);
 			stack.push_back(root);
 			do	{
 				const btDbvtNode*	n=stack[stack.size()-1];

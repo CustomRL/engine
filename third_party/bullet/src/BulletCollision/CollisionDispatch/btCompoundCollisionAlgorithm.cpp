@@ -37,8 +37,12 @@ m_sharedManifold(ci.m_manifold)
 	
 	const btCompoundShape* compoundShape = static_cast<const btCompoundShape*>(colObjWrap->getCollisionShape());
 	m_compoundShapeRevision = compoundShape->getUpdateRevision();
-	
-	
+
+	// engine: the arrays start in the algorithm's own (pooled) storage, so making a pair allocates nothing for up
+	// to kInline children; past that they grow on the heap as before
+	m_childCollisionAlgorithms.initializeFromBuffer(m_childBuffer, 0, kInline);
+	m_manifoldArray.initializeFromBuffer(m_manifoldBuffer, 0, kInline);
+	m_stack.initializeFromBuffer(m_stackBuffer, 0, kInlineStack);
 	preallocateChildAlgorithms(body0Wrap,body1Wrap);
 }
 
@@ -54,6 +58,8 @@ void	btCompoundCollisionAlgorithm::preallocateChildAlgorithms(const btCollisionO
 	int i;
 	
 	m_childCollisionAlgorithms.resize(numChildren);
+	// engine: processCollision's manifold list sized when the pair is made, not in a later tick; one per child
+	m_manifoldArray.reserve(numChildren);
 	for (i=0;i<numChildren;i++)
 	{
 		if (compoundShape->getDynamicAabbTree())
@@ -241,7 +247,8 @@ void btCompoundCollisionAlgorithm::processCollision (const btCollisionObjectWrap
 	///so we should add a 'refreshManifolds' in the btCollisionAlgorithm
 	{
 		int i;
-		btManifoldArray manifoldArray;
+		btManifoldArray& manifoldArray = m_manifoldArray;  // engine: kept, no allocation per tick
+		manifoldArray.resize(0);
 		for (i=0;i<m_childCollisionAlgorithms.size();i++)
 		{
 			if (m_childCollisionAlgorithms[i])
@@ -271,7 +278,7 @@ void btCompoundCollisionAlgorithm::processCollision (const btCollisionObjectWrap
 
 		const ATTRIBUTE_ALIGNED16(btDbvtVolume)	bounds=btDbvtVolume::FromMM(localAabbMin,localAabbMax);
 		//process all children, that overlap with  the given AABB bounds
-		tree->collideTV(tree->m_root,bounds,callback);
+		tree->collideTVNoStackAlloc(tree->m_root,bounds,m_stack,callback);  // engine: kept stack, no allocation per tick
 
 	} else
 	{
