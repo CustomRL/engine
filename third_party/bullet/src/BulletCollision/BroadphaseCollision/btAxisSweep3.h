@@ -240,6 +240,9 @@ btBroadphaseProxy*	btAxisSweep3Internal<BP_FP_INT_TYPE>::createProxy(  const btV
 			btBroadphaseProxy* rayProxy = m_raycastAccelerator->createProxy(aabbMin,aabbMax,shapeType,userPtr,collisionFilterGroup,collisionFilterMask,dispatcher,0);
 			handle->m_dbvtProxy = rayProxy;
 		}
+		// RL: createProxy (140272c30) ends with a virtual setAabb, so a new handle holds its AABB for aabbTest
+		// (140270d80) even when it is never updated, as a static with simulation disabled isn't
+		setAabb(handle,aabbMin,aabbMax,dispatcher);
 		return handle;
 }
 
