@@ -34,6 +34,7 @@ add_library(engine STATIC
     src/engine/gpu/gpu_profiler.cpp
     src/engine/gpu/sampler.cpp
     src/engine/gpu/shader.cpp
+    src/engine/gpu/shader_cache.cpp
     src/engine/gpu/states.cpp
     src/engine/gpu/texture.cpp
     src/engine/gpu/texture_streamer.cpp

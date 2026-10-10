@@ -1,6 +1,7 @@
 #include "engine/ui2d/canvas.h"
 
 #include "engine/core/fatal.h"
+#include "engine/gpu/shader_cache.h"
 
 #include <d3dcompiler.h>
 
@@ -70,7 +71,7 @@ void check(HRESULT hr, const char* what) {
 
 ComPtr<ID3DBlob> compile(const char* entry, const char* target) {
     ComPtr<ID3DBlob> code, errors;
-    if (FAILED(D3DCompile(SHADER, sizeof SHADER - 1, "ui2d canvas", nullptr, nullptr, entry, target, D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &code,
+    if (FAILED(engine::gpu::compileCached(SHADER, sizeof SHADER - 1, "ui2d canvas", nullptr, nullptr, entry, target, D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &code,
                           &errors)))
         fatal("ui2d canvas shader %s: %s", entry, errors ? static_cast<const char*>(errors->GetBufferPointer()) : "unknown error");
     return code;
