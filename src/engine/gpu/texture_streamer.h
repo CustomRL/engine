@@ -37,6 +37,11 @@ public:
     // the device refuses the chain; fatal past capacity. faces 6 makes a cube (+X -X +Y -Y +Z -Z): mips then holds count mips of each
     // face in turn, every face's chain the same sizes, and a request moves the top of all six.
     uint32_t add(DXGI_FORMAT format, const SourceMip* mips, int count, int faces = 1);
+    // The same checks and handle as add, with nothing created: no view until load() or a request makes one. For a caller
+    // that learns later which of its textures it draws, so the rest never take memory.
+    uint32_t reserve(DXGI_FORMAT format, const SourceMip* mips, int count, int faces = 1);
+    bool load(uint32_t t);  // a reserved texture's low mips, as add loads them; false when the device refuses them
+    bool loaded(uint32_t t) const { return slots_[t].current.texture != nullptr; }
 
     enum class Request { Queued, Resident, Pending, OverBudget, Invalid };
     Request request(uint32_t t, int top);

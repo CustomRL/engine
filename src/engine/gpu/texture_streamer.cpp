@@ -49,6 +49,14 @@ Texture TextureStreamer::make(const Slot& s, int top) const {
 }
 
 uint32_t TextureStreamer::add(DXGI_FORMAT format, const SourceMip* mips, int count, int faces) {
+    const uint32_t t = reserve(format, mips, count, faces);
+    if (t == ~0u || load(t))
+        return t;
+    stats_.textures--;  // the device refused it: the slot is free again
+    return ~0u;
+}
+
+uint32_t TextureStreamer::reserve(DXGI_FORMAT format, const SourceMip* mips, int count, int faces) {
     if (stats_.textures == capacity_)
         fatal("TextureStreamer: more than %u textures", capacity_);
     if (count < 1 || count > D3D11_REQ_MIP_LEVELS || (faces != 1 && faces != 6))
@@ -63,21 +71,31 @@ uint32_t TextureStreamer::add(DXGI_FORMAT format, const SourceMip* mips, int cou
         if (rowBytes(format, mips[i].width) == 0 || mips[i].size != mipBytes(format, mips[i].width, mips[i].height) ||
             mips[i].width != mips[i % count].width || mips[i].height != mips[i % count].height)
             return ~0u;
-    int top = count - 1;
-    while (top > 0 && std::max(mips[top - 1].width, mips[top - 1].height) <= loadSize_)
+    s.current = {};
+    s.top = count;  // nothing resident
+    s.bytes = 0;
+    s.pending = false;
+    stats_.textures++;
+    return t;
+}
+
+bool TextureStreamer::load(uint32_t t) {
+    Slot& s = slots_[t];
+    if (s.current.texture || s.pending)
+        return true;
+    int top = s.count - 1;
+    while (top > 0 && std::max(s.mips[top - 1].width, s.mips[top - 1].height) <= loadSize_)
         top--;
     while (top > 0 && !validTop(t, top))
         top--;
     s.current = make(s, top);
     if (!s.current.texture)
-        return ~0u;
+        return false;
     s.top = top;
     s.bytes = chainBytes(t, top);
-    s.pending = false;
-    stats_.textures++;
     stats_.resident += s.bytes;
     stats_.peak = std::max(stats_.peak, stats_.resident + stats_.inFlight);
-    return t;
+    return true;
 }
 
 TextureStreamer::Request TextureStreamer::request(uint32_t t, int top) {

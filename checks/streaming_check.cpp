@@ -143,6 +143,16 @@ static void streamer(gpu::Device& device) {
         }
     CHECK(same);
     std::printf("texture streamer cube: ok\n");
+
+    // reserved textures take nothing until loaded or requested
+    TextureStreamer lazy(device, ~0ull, 2);
+    CHECK(lazy.reserve(DXGI_FORMAT_BC1_UNORM, mips[0], 9) == 0 && lazy.reserve(DXGI_FORMAT_BC1_UNORM, mips[1], 9) == 1);
+    CHECK(!lazy.loaded(0) && !lazy.view(0) && lazy.stats().resident == 0 && lazy.stats().textures == 2);
+    CHECK(lazy.load(0) && lazy.residentTop(0) == 2 && lazy.stats().resident == low && equalsSource(lazy, 0, 2));
+    CHECK(lazy.request(1, 0) == TextureStreamer::Request::Queued);
+    lazy.finish();
+    CHECK(lazy.residentTop(1) == 0 && lazy.stats().resident == low + full && equalsSource(lazy, 1, 0));
+    std::printf("texture streamer reserve: ok\n");
 }
 
 void streamingChecks(gpu::Device& device) {
