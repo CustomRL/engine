@@ -37,6 +37,7 @@ add_library(engine STATIC
     src/engine/gpu/states.cpp
     src/engine/gpu/texture.cpp
     src/engine/gpu/texture_streamer.cpp
+    src/engine/platform/audio_out.cpp
     src/engine/platform/clock.cpp
     src/engine/platform/input.cpp
     src/engine/platform/window.cpp
