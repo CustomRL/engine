@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): RL's bounded plane constructor.
+
 #include "btStaticPlaneShape.h"
 
 #include "LinearMath/btTransformUtil.h"
@@ -21,10 +23,22 @@ subject to the following restrictions:
 btStaticPlaneShape::btStaticPlaneShape(const btVector3& planeNormal,btScalar planeConstant)
 : btConcaveShape (), m_planeNormal(planeNormal.normalized()),
 m_planeConstant(planeConstant),
-m_localScaling(btScalar(0.),btScalar(0.),btScalar(0.))
+m_localScaling(btScalar(0.),btScalar(0.),btScalar(0.)),
+m_rlHalfExtentX(btScalar(BT_LARGE_FLOAT)),
+m_rlHalfExtentY(btScalar(BT_LARGE_FLOAT))
 {
 	m_shapeType = STATIC_PLANE_PROXYTYPE;
 	//	btAssert( btFuzzyZero(m_planeNormal.length() - btScalar(1.)) );
+}
+
+btStaticPlaneShape::btStaticPlaneShape(btScalar halfExtentX,btScalar halfExtentY)
+: btConcaveShape (), m_planeNormal(btScalar(0.),btScalar(0.),btScalar(1.)),
+m_planeConstant(btScalar(0.)),
+m_localScaling(btScalar(0.),btScalar(0.),btScalar(0.)),
+m_rlHalfExtentX(halfExtentX),
+m_rlHalfExtentY(halfExtentY)
+{
+	m_shapeType = STATIC_PLANE_PROXYTYPE;
 }
 
 

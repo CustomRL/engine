@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): RL's bounded plane (see m_rlHalfExtentX).
+
 #ifndef BT_STATIC_PLANE_SHAPE_H
 #define BT_STATIC_PLANE_SHAPE_H
 
@@ -31,9 +33,17 @@ protected:
 	btVector3	m_localScaling;
 
 public:
+	// RL: the plane is bounded in its local X and Y (shape +0x20, +0x24); btConvexPlaneCollisionAlgorithm::processCollision
+	// (140294fb0) keeps only contacts inside them. The stock constructor leaves them unbounded.
+	btScalar	m_rlHalfExtentX;
+	btScalar	m_rlHalfExtentY;
+
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 	btStaticPlaneShape(const btVector3& planeNormal,btScalar planeConstant);
+
+	// RL (14029adf0): the plane z = 0 of its own frame, bounded to |x| <= halfExtentX, |y| <= halfExtentY
+	btStaticPlaneShape(btScalar halfExtentX,btScalar halfExtentY);
 
 	virtual ~btStaticPlaneShape();
 

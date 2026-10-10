@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): processCollision keeps only contacts inside RL's plane bounds.
+
 #include "btConvexPlaneCollisionAlgorithm.h"
 
 #include "BulletCollision/CollisionDispatch/btCollisionDispatcher.h"
@@ -118,7 +120,12 @@ void btConvexPlaneCollisionAlgorithm::processCollision (const btCollisionObjectW
 	btVector3 vtxInPlaneProjected = vtxInPlane - distance*planeNormal;
 	btVector3 vtxInPlaneWorld = planeObjWrap->getWorldTransform() * vtxInPlaneProjected;
 
-	hasCollision = distance < m_manifoldPtr->getContactBreakingThreshold();
+	// RL (140294fb0): the supporting vertex must also lie within the plane's half extents, widened by the breaking threshold
+	btScalar threshold = m_manifoldPtr->getContactBreakingThreshold();
+	btScalar boundX = threshold + planeShape->m_rlHalfExtentX;
+	btScalar boundY = threshold + planeShape->m_rlHalfExtentY;
+	hasCollision = distance < threshold && -boundX <= vtxInPlane.getX() && -boundY <= vtxInPlane.getY() &&
+		vtxInPlane.getX() <= boundX && vtxInPlane.getY() <= boundY;
 	resultOut->setPersistentManifold(m_manifoldPtr);
 	if (hasCollision)
 	{
