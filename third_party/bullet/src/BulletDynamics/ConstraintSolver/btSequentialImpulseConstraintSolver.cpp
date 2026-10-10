@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): contact setup, impulse scales, averaged contacts and the skipped averaged rows (each marked RL with its function).
+
 //#define COMPUTE_IMPULSE_DENOM 1
 //#define BT_ADDITIONAL_DEBUG
 
@@ -171,8 +173,9 @@ void btSequentialImpulseConstraintSolver::resolveSingleConstraintRowGenericSIMD(
 	{
 		c.m_appliedImpulse = sum;
 	}
-	body1.internalApplyImpulse(c.m_contactNormal1*body1.internalGetInvMass(),c.m_angularComponentA,deltaImpulse);
-	body2.internalApplyImpulse(c.m_contactNormal2*body2.internalGetInvMass(),c.m_angularComponentB,deltaImpulse);
+	// RL (1402b9e80): each body's share is scaled by the contact's m_rlImpulseScaleA / m_rlImpulseScaleB
+	body1.internalApplyImpulse(c.m_contactNormal1*body1.internalGetInvMass(),c.m_angularComponentA,deltaImpulse*c.m_rlImpulseScaleA);
+	body2.internalApplyImpulse(c.m_contactNormal2*body2.internalGetInvMass(),c.m_angularComponentB,deltaImpulse*c.m_rlImpulseScaleB);
 }
 
 
@@ -200,8 +203,9 @@ void	btSequentialImpulseConstraintSolver::resolveSplitPenetrationImpulseCacheFri
 			{
 				c.m_appliedPushImpulse = sum;
 			}
-			body1.internalApplyPushImpulse(c.m_contactNormal1*body1.internalGetInvMass(),c.m_angularComponentA,deltaImpulse);
-			body2.internalApplyPushImpulse(c.m_contactNormal2*body2.internalGetInvMass(),c.m_angularComponentB,deltaImpulse);
+			// RL (1402ba140): scaled like the velocity impulse
+			body1.internalApplyPushImpulse(c.m_contactNormal1*body1.internalGetInvMass(),c.m_angularComponentA,deltaImpulse*c.m_rlImpulseScaleA);
+			body2.internalApplyPushImpulse(c.m_contactNormal2*body2.internalGetInvMass(),c.m_angularComponentB,deltaImpulse*c.m_rlImpulseScaleB);
         }
 }
 
@@ -714,7 +718,9 @@ void btSequentialImpulseConstraintSolver::setupContactConstraint(btSolverConstra
 					{
 						positionalError = 0;
 
-						velocityError -= penetration / infoGlobal.m_timeStep;
+						// RL (1402bb8c0): gated by solver info +0x54
+						if (infoGlobal.m_rlPenetrationVelocity)
+							velocityError -= penetration / infoGlobal.m_timeStep;
 					} else
 					{
 						positionalError = -penetration * erp/infoGlobal.m_timeStep;
@@ -739,6 +745,10 @@ void btSequentialImpulseConstraintSolver::setupContactConstraint(btSolverConstra
 					solverConstraint.m_lowerLimit = 0;
 					solverConstraint.m_upperLimit = 1e10f;
 				}
+				// RL (1402bb8c0): the point's scales and averaged flag go with the constraint
+				solverConstraint.m_rlImpulseScaleA = cp.m_rlImpulseScaleA;
+				solverConstraint.m_rlImpulseScaleB = cp.m_rlImpulseScaleB;
+				solverConstraint.m_rlAveraged = cp.m_rlAveraged;
 
 
 

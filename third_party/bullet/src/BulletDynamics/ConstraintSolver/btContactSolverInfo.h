@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): m_rlPenetrationVelocity added (see it).
+
 #ifndef BT_CONTACT_SOLVER_INFO
 #define BT_CONTACT_SOLVER_INFO
 
@@ -58,6 +60,9 @@ struct btContactSolverInfoData
 	int			m_minimumSolverBatchSize;
 	btScalar	m_maxGyroscopicForce;
 	btScalar	m_singleAxisRollingFrictionThreshold;
+	// RL: solver info +0x54. setupContactConstraint (1402bb8c0) subtracts penetration / timeStep from a separated contact's
+	// velocity error only when it is set; RL's world constructor (FUN_1402ae930, at 1402aea1c) sets it false
+	bool		m_rlPenetrationVelocity;
 
 
 };
@@ -90,7 +95,8 @@ struct btContactSolverInfo : public btContactSolverInfoData
 		m_restingContactRestitutionThreshold = 2;//unused as of 2.81
 		m_minimumSolverBatchSize = 128; //try to combine islands until the amount of constraints reaches this limit
 		m_maxGyroscopicForce = 100.f; ///only used to clamp forces for bodies that have their BT_ENABLE_GYROPSCOPIC_FORCE flag set (using btRigidBody::setFlag)
-		m_singleAxisRollingFrictionThreshold = 1e30f;///if the velocity is above this threshold, it will use a single constraint row (axis), otherwise 3 rows.
+		m_singleAxisRollingFrictionThreshold = 1e30f;
+		m_rlPenetrationVelocity = false;///if the velocity is above this threshold, it will use a single constraint row (axis), otherwise 3 rows.
 	}
 };
 
