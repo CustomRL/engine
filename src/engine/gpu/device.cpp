@@ -2,6 +2,8 @@
 
 #include "engine/core/fatal.h"
 
+#include <utility>
+
 using Microsoft::WRL::ComPtr;
 
 namespace engine::gpu {
@@ -38,7 +40,14 @@ void Device::createDevice() {
 
 Device::Device(void* hwnd) {
     createDevice();
+    createSwapChain(hwnd);
+}
 
+Device::Device(void* hwnd, Device&& windowless) : device_(std::move(windowless.device_)), context_(std::move(windowless.context_)) {
+    createSwapChain(hwnd);
+}
+
+void Device::createSwapChain(void* hwnd) {
     ComPtr<IDXGIDevice> dxgiDevice;
     check(device_.As(&dxgiDevice), "IDXGIDevice");
     ComPtr<IDXGIAdapter> adapter;

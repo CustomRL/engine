@@ -12,6 +12,9 @@ class Device {
 public:
     // A device presenting to the window
     explicit Device(void* hwnd);
+    // A device presenting to the window with a windowless device's D3D device and context, so the D3D device can be
+    // made on another thread while the window is made
+    Device(void* hwnd, Device&& windowless);
     // A device with no window, for drawing offscreen only: beginFrame and present are not for it
     Device();
 
@@ -31,6 +34,7 @@ public:
 
 private:
     void createDevice();
+    void createSwapChain(void* hwnd);
     void resize(int width, int height);
     UINT swapChainFlags() const;
 
