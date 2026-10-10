@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): three members RL added at the end (see m_rlImpulseScaleA).
+
 #ifndef BT_SOLVER_CONSTRAINT_H
 #define BT_SOLVER_CONSTRAINT_H
 
@@ -62,6 +64,12 @@ ATTRIBUTE_ALIGNED16 (struct)	btSolverConstraint
     int			m_frictionIndex;
 	int m_solverBodyIdA;
 	int m_solverBodyIdB;
+
+	// RL: the contact point's m_rlImpulseScaleA, m_rlImpulseScaleB and m_rlAveraged (+0xb8, +0xbc, +0xc0 of RL's
+	// 0xd0-byte constraint), copied by setupContactConstraint (1402bb8c0); only contact constraints read them
+	btScalar	m_rlImpulseScaleA;
+	btScalar	m_rlImpulseScaleB;
+	bool		m_rlAveraged;
 
     
 	enum		btSolverConstraintType

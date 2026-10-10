@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): three members RL added after m_lateralFrictionDir2 (see m_rlImpulseScaleA).
+
 #ifndef BT_MANIFOLD_CONTACT_POINT_H
 #define BT_MANIFOLD_CONTACT_POINT_H
 
@@ -52,7 +54,10 @@ class btManifoldPoint
 				m_contactMotion2(0.f),
 				m_contactCFM1(0.f),
 				m_contactCFM2(0.f),
-				m_lifeTime(0)
+				m_lifeTime(0),
+				m_rlImpulseScaleA(1.f),
+				m_rlImpulseScaleB(1.f),
+				m_rlAveraged(false)
 			{
 			}
 
@@ -75,7 +80,10 @@ class btManifoldPoint
 					m_contactMotion2(0.f),
 					m_contactCFM1(0.f),
 					m_contactCFM2(0.f),
-					m_lifeTime(0)
+					m_lifeTime(0),
+					m_rlImpulseScaleA(1.f),
+					m_rlImpulseScaleB(1.f),
+					m_rlAveraged(false)
 			{
 				
 			}
@@ -115,6 +123,15 @@ class btManifoldPoint
 			
 			btVector3		m_lateralFrictionDir1;
 			btVector3		m_lateralFrictionDir2;
+
+			// RL: btManifoldResult::addContactPoint (1402856c0) starts these at 1, 1 and false (point +0x104,
+			// +0x108, +0x10c). setupContactConstraint (1402bb8c0) copies them to the solver constraint: the scales
+			// multiply the normal and split impulses body A and body B get (1402b9e80, 1402ba140); m_rlAveraged,
+			// which RL's contact-added callback (140410ff0) sets for a sphere against a triangle or a plane, makes
+			// convertContact (1402b3220) fold the point into its body's averaged contact instead of solving it.
+			btScalar		m_rlImpulseScaleA;
+			btScalar		m_rlImpulseScaleB;
+			bool			m_rlAveraged;
 
 
 
