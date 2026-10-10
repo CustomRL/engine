@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): the AABB 0.08 past the radius.
+
 #include "btSphereShape.h"
 #include "BulletCollision/CollisionShapes/btCollisionMargin.h"
 
@@ -54,8 +56,10 @@ btVector3	btSphereShape::localGetSupportingVertex(const btVector3& vec)const
 //broken due to scaling
 void btSphereShape::getAabb(const btTransform& t,btVector3& aabbMin,btVector3& aabbMax) const
 {
+	// RL (1402a63c0): the box reaches twice 0.04 (141a549c8) past the radius
 	const btVector3& center = t.getOrigin();
-	btVector3 extent(getMargin(),getMargin(),getMargin());
+	const btScalar e = getRadius() + btScalar(0.04) + btScalar(0.04);
+	btVector3 extent(e,e,e);
 	aabbMin = center - extent;
 	aabbMax = center + extent;
 }

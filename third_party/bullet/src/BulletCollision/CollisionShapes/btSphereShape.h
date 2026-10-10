@@ -12,6 +12,9 @@ subject to the following restrictions:
 2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
+
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): the bounding sphere 0.08 past the radius.
+
 #ifndef BT_SPHERE_MINKOWSKI_H
 #define BT_SPHERE_MINKOWSKI_H
 
@@ -43,6 +46,12 @@ public:
 
 	virtual void getAabb(const btTransform& t,btVector3& aabbMin,btVector3& aabbMax) const;
 
+	// RL (1402a6700): the bounding sphere is the radius plus twice 0.04, which sets the contact breaking threshold
+	virtual void getBoundingSphere(btVector3& center,btScalar& radius) const
+	{
+		center.setValue(0,0,0);
+		radius = getRadius() + btScalar(0.04) + btScalar(0.04);
+	}
 
 	btScalar	getRadius() const { return m_implicitShapeDimensions.getX() * m_localScaling.getX();}
 
