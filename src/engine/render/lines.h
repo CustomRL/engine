@@ -16,6 +16,8 @@ public:
 
     // color is 0xAABBGGRR (R8G8B8A8_UNORM in memory)
     void add(const DirectX::XMFLOAT3& a, const DirectX::XMFLOAT3& b, uint32_t color);
+    // Room for that many segments up front, so adding up to them never allocates
+    void reserve(size_t segments) { vertices_.reserve(segments * 2); }
     // Draws every segment added since the last draw into the bound target, then forgets them. viewProjection takes row vectors (v * M).
     void draw(const DirectX::XMFLOAT4X4& viewProjection);
 
