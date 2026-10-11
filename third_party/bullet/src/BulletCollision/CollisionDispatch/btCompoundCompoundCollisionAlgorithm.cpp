@@ -230,14 +230,14 @@ static DBVT_INLINE bool		MyIntersect(	const btDbvtAabbMm& a,
 static inline void		MycollideTT(	const btDbvtNode* root0,
 								  const btDbvtNode* root1,
 								  const btTransform& xform,
-								  btCompoundCompoundLeafCallback* callback)
+								  btCompoundCompoundLeafCallback* callback,
+								  btAlignedObjectArray<btDbvt::sStkNN>& stkStack)
 {
 
 		if(root0&&root1)
 		{
 			int								depth=1;
 			int								treshold=btDbvt::DOUBLE_STACKSIZE-4;
-			btAlignedObjectArray<btDbvt::sStkNN>	stkStack;
 			stkStack.resize(btDbvt::DOUBLE_STACKSIZE);
 			stkStack[0]=btDbvt::sStkNN(root0,root1);
 			do	{
@@ -306,7 +306,8 @@ void btCompoundCompoundCollisionAlgorithm::processCollision (const btCollisionOb
 	///so we should add a 'refreshManifolds' in the btCollisionAlgorithm
 	{
 		int i;
-		btManifoldArray manifoldArray;
+		btManifoldArray& manifoldArray = m_manifoldArray;  // engine: kept, no allocation per tick
+		manifoldArray.resize(0);
 		btSimplePairArray& pairs = m_childCollisionAlgorithmCache->getOverlappingPairArray();
 		for (i=0;i<pairs.size();i++)
 		{
@@ -336,7 +337,7 @@ void btCompoundCompoundCollisionAlgorithm::processCollision (const btCollisionOb
 
 
 	const btTransform	xform=col0ObjWrap->getWorldTransform().inverse()*col1ObjWrap->getWorldTransform();
-	MycollideTT(tree0->m_root,tree1->m_root,xform,&callback);
+	MycollideTT(tree0->m_root,tree1->m_root,xform,&callback,m_stkStack);
 
 	//printf("#compound-compound child/leaf overlap =%d                      \r",callback.m_numOverlapPairs);
 

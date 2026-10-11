@@ -27,6 +27,7 @@ class btDispatcher;
 #include "BulletCollision/CollisionDispatch/btCollisionCreateFunc.h"
 #include "LinearMath/btAlignedObjectArray.h"
 #include "BulletCollision/CollisionDispatch/btHashedSimplePairCache.h"
+#include "BulletCollision/BroadphaseCollision/btDbvt.h"
 class btDispatcher;
 class btCollisionObject;
 
@@ -40,6 +41,9 @@ class btCompoundCompoundCollisionAlgorithm  : public btActivatingCollisionAlgori
 
 	class btHashedSimplePairCache*	m_childCollisionAlgorithmCache;
 	btSimplePairArray m_removePairs;
+	// engine: processCollision's manifold list and tree stack, kept so a tick allocates nothing once they have grown
+	btAlignedObjectArray<class btPersistentManifold*>	m_manifoldArray;
+	btAlignedObjectArray<btDbvt::sStkNN>	m_stkStack;
 
 	class btPersistentManifold*	m_sharedManifold;
 	bool					m_ownsManifold;

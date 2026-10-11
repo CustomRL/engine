@@ -110,6 +110,8 @@ btDefaultCollisionConfiguration::btDefaultCollisionConfiguration(const btDefault
 	int	collisionAlgorithmMaxElementSize = btMax(maxSize,constructionInfo.m_customCollisionAlgorithmMaxElementSize);
 	collisionAlgorithmMaxElementSize = btMax(collisionAlgorithmMaxElementSize,maxSize2);
 	collisionAlgorithmMaxElementSize = btMax(collisionAlgorithmMaxElementSize,maxSize3);
+	// engine: the compound-compound algorithm is pooled too; past the element size the pool overruns it
+	collisionAlgorithmMaxElementSize = btMax(collisionAlgorithmMaxElementSize,int(sizeof(btCompoundCompoundCollisionAlgorithm)));
 
 		
 	if (constructionInfo.m_persistentManifoldPool)
