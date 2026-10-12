@@ -32,8 +32,9 @@ m_sharedManifold(ci.m_manifold)
 {
 	m_ownsManifold = false;
 
-	void* ptr = btAlignedAlloc(sizeof(btHashedSimplePairCache),16);
-	m_childCollisionAlgorithmCache= new(ptr) btHashedSimplePairCache();
+	m_childCollisionAlgorithmCache= &m_childCache;  // engine: kept in the algorithm, not on the heap
+	m_removePairs.initializeFromBuffer(m_removeBuffer, 0, kInline);
+	m_manifoldArray.initializeFromBuffer(m_manifoldBuffer, 0, kInline);
 
 	const btCollisionObjectWrapper* col0ObjWrap = body0Wrap;
 	btAssert (col0ObjWrap->getCollisionShape()->isCompound());
@@ -54,8 +55,6 @@ m_sharedManifold(ci.m_manifold)
 btCompoundCompoundCollisionAlgorithm::~btCompoundCompoundCollisionAlgorithm()
 {
 	removeChildAlgorithms();
-	m_childCollisionAlgorithmCache->~btHashedSimplePairCache();
-	btAlignedFree(m_childCollisionAlgorithmCache);
 }
 
 void	btCompoundCompoundCollisionAlgorithm::getAllContactManifolds(btManifoldArray&	manifoldArray)
@@ -230,15 +229,17 @@ static DBVT_INLINE bool		MyIntersect(	const btDbvtAabbMm& a,
 static inline void		MycollideTT(	const btDbvtNode* root0,
 								  const btDbvtNode* root1,
 								  const btTransform& xform,
-								  btCompoundCompoundLeafCallback* callback,
-								  btAlignedObjectArray<btDbvt::sStkNN>& stkStack)
+								  btCompoundCompoundLeafCallback* callback)
 {
 
 		if(root0&&root1)
 		{
 			int								depth=1;
 			int								treshold=btDbvt::DOUBLE_STACKSIZE-4;
-			stkStack.resize(btDbvt::DOUBLE_STACKSIZE);
+			// engine: the stack starts on the C stack, so a call allocates nothing unless it outgrows it
+			btDbvt::sStkNN	stackBuffer[btDbvt::DOUBLE_STACKSIZE];
+			btAlignedObjectArray<btDbvt::sStkNN>	stkStack;
+			stkStack.initializeFromBuffer(stackBuffer, btDbvt::DOUBLE_STACKSIZE, btDbvt::DOUBLE_STACKSIZE);
 			stkStack[0]=btDbvt::sStkNN(root0,root1);
 			do	{
 				btDbvt::sStkNN	p=stkStack[--depth];
@@ -337,7 +338,7 @@ void btCompoundCompoundCollisionAlgorithm::processCollision (const btCollisionOb
 
 
 	const btTransform	xform=col0ObjWrap->getWorldTransform().inverse()*col1ObjWrap->getWorldTransform();
-	MycollideTT(tree0->m_root,tree1->m_root,xform,&callback,m_stkStack);
+	MycollideTT(tree0->m_root,tree1->m_root,xform,&callback);
 
 	//printf("#compound-compound child/leaf overlap =%d                      \r",callback.m_numOverlapPairs);
 
@@ -406,7 +407,7 @@ void btCompoundCompoundCollisionAlgorithm::processCollision (const btCollisionOb
 		{
 			m_childCollisionAlgorithmCache->removeOverlappingPair(m_removePairs[i].m_indexA,m_removePairs[i].m_indexB);
 		}
-		m_removePairs.clear();
+		m_removePairs.resizeNoInitialize(0);  // engine: not clear(), which drops the inline storage
 	}
 
 }

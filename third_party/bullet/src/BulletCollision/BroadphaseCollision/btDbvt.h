@@ -1069,7 +1069,10 @@ inline void		btDbvt::rayTest(	const btDbvtNode* root,
 			int								depth=1;
 			int								treshold=DOUBLE_STACKSIZE-2;
 
-			stack.resize(DOUBLE_STACKSIZE);
+			// engine: the stack starts on the C stack, so a ray (a wheel's against a car) allocates nothing
+			// unless it outgrows it
+			const btDbvtNode*	stackBuffer[DOUBLE_STACKSIZE];
+			stack.initializeFromBuffer(stackBuffer, DOUBLE_STACKSIZE, DOUBLE_STACKSIZE);
 			stack[0]=root;
 			btVector3 bounds[2];
 			do	{

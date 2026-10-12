@@ -27,7 +27,6 @@ class btDispatcher;
 #include "BulletCollision/CollisionDispatch/btCollisionCreateFunc.h"
 #include "LinearMath/btAlignedObjectArray.h"
 #include "BulletCollision/CollisionDispatch/btHashedSimplePairCache.h"
-#include "BulletCollision/BroadphaseCollision/btDbvt.h"
 class btDispatcher;
 class btCollisionObject;
 
@@ -41,9 +40,15 @@ class btCompoundCompoundCollisionAlgorithm  : public btActivatingCollisionAlgori
 
 	class btHashedSimplePairCache*	m_childCollisionAlgorithmCache;
 	btSimplePairArray m_removePairs;
-	// engine: processCollision's manifold list and tree stack, kept so a tick allocates nothing once they have grown
+	// engine: processCollision's manifold list, kept so a tick allocates nothing once it has grown
 	btAlignedObjectArray<class btPersistentManifold*>	m_manifoldArray;
-	btAlignedObjectArray<btDbvt::sStkNN>	m_stkStack;
+	// engine: the child cache and the arrays above start in the algorithm's own (pooled) storage, so two cars
+	// meeting allocate nothing: a car is one box, so one child pair and one manifold. Compounds with more children
+	// than kInline grow on the heap as before.
+	enum { kInline = 4 };
+	btHashedSimplePairCache	m_childCache;
+	alignas(btSimplePair) char	m_removeBuffer[kInline * sizeof(btSimplePair)];
+	btPersistentManifold*	m_manifoldBuffer[kInline];
 
 	class btPersistentManifold*	m_sharedManifold;
 	bool					m_ownsManifold;

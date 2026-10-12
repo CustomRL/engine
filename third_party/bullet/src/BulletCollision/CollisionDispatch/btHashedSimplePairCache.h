@@ -63,7 +63,15 @@ protected:
 	
 	btAlignedObjectArray<int>	m_hashTable;
 	btAlignedObjectArray<int>	m_next;
-	
+
+	// engine: the initial capacity in the cache's own storage, so making a cache allocates nothing; past it the
+	// arrays grow on the heap as before
+	enum { kInitialCapacity = 2 };
+	alignas(btSimplePair) char	m_pairBuffer[kInitialCapacity * sizeof(btSimplePair)];
+	int	m_hashBuffer[kInitialCapacity];
+	int	m_nextBuffer[kInitialCapacity];
+	void	initTables();
+
 
 public:
 	btHashedSimplePairCache();

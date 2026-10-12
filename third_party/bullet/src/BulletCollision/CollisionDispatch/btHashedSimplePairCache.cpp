@@ -31,8 +31,14 @@ int gFindSimplePairs =0;
 btHashedSimplePairCache::btHashedSimplePairCache():
 	m_blockedForChanges(false)
 {
-	int initialAllocatedSize= 2;
-	m_overlappingPairArray.reserve(initialAllocatedSize);
+	initTables();
+}
+
+void btHashedSimplePairCache::initTables()
+{
+	m_overlappingPairArray.initializeFromBuffer(m_pairBuffer, 0, kInitialCapacity);
+	m_hashTable.initializeFromBuffer(m_hashBuffer, 0, kInitialCapacity);
+	m_next.initializeFromBuffer(m_nextBuffer, 0, kInitialCapacity);
 	growTables();
 }
 
@@ -50,13 +56,7 @@ btHashedSimplePairCache::~btHashedSimplePairCache()
 
 void btHashedSimplePairCache::removeAllPairs()
 {
-	m_overlappingPairArray.clear();
-	m_hashTable.clear();
-	m_next.clear();
-
-	int initialAllocatedSize= 2;
-	m_overlappingPairArray.reserve(initialAllocatedSize);
-	growTables();
+	initTables();
 }
 
 
