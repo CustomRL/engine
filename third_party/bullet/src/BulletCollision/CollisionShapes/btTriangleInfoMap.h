@@ -16,6 +16,9 @@ subject to the following restrictions:
 #ifndef _BT_TRIANGLE_INFO_MAP_H
 #define _BT_TRIANGLE_INFO_MAP_H
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.2): btTriangleInfo starts with every angle 0 (see
+// its constructor).
+
 
 #include "LinearMath/btHashMap.h"
 #include "LinearMath/btSerializer.h"
@@ -35,11 +38,13 @@ subject to the following restrictions:
 ///it can be generated using 
 struct	btTriangleInfo
 {
+	// RL (140296660 inserts a new triangle's info all zero): an edge no triangle shares keeps angle 0, which
+	// btAdjustInternalEdgeContacts takes for a planar edge; stock 2.82 starts at SIMD_2_PI, which it skips
 	btTriangleInfo()
 	{
-		m_edgeV0V1Angle = SIMD_2_PI;
-		m_edgeV1V2Angle = SIMD_2_PI;
-		m_edgeV2V0Angle = SIMD_2_PI;
+		m_edgeV0V1Angle = 0;
+		m_edgeV1V2Angle = 0;
+		m_edgeV2V0Angle = 0;
 		m_flags=0;
 	}
 
