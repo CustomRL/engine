@@ -15,6 +15,7 @@ subject to the following restrictions:
 
 #include "btGjkPairDetector.h"
 #include "BulletCollision/CollisionShapes/btConvexShape.h"
+#include "BulletCollision/CollisionShapes/btTriangleShape.h"
 #include "BulletCollision/NarrowPhaseCollision/btSimplexSolverInterface.h"
 #include "BulletCollision/NarrowPhaseCollision/btConvexPenetrationDepthSolver.h"
 
@@ -440,7 +441,15 @@ void btGjkPairDetector::getClosestPointsNonVirtual(const ClosestPointInput& inpu
 		}
 #endif 
 
-		if (m_fixContactNormalDirection)
+		if (m_fixContactNormalDirection && m_minkowskiB->getShapeType() == TRIANGLE_SHAPE_PROXYTYPE)
+		{
+			// RL (1402a7b0f): against a triangle the normal is its face's, (v1-v0) x (v2-v0) in B's frame, whichever
+			// side of it A is on
+			const btVector3* v = static_cast<const btTriangleShape*>(m_minkowskiB)->m_vertices1;
+			normalInB = localTransB.getBasis() * (v[1] - v[0]).cross(v[2] - v[0]);
+			normalInB *= btScalar(1.) / btSqrt(normalInB.length2());
+		}
+		else if (m_fixContactNormalDirection)
 		{
 			///@workaround for sticky convex collisions
 			//in some degenerate cases (usually when the use uses very small margins) 
