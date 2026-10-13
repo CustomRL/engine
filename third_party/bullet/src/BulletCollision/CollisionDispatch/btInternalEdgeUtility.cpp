@@ -8,6 +8,9 @@
 #include "LinearMath/btIDebugDraw.h"
 #include "BulletCollision/CollisionDispatch/btCollisionObjectWrapper.h"
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): btAdjustInternalEdgeContacts' choice of the
+// nearest edge (marked RL with its function).
+
 //#define DEBUG_INTERNAL_EDGE
 
 #ifdef DEBUG_INTERNAL_EDGE
@@ -411,6 +414,28 @@ void btNearestPointInLineSegment(const btVector3 &point, const btVector3& line0,
 	}
 }
 
+// RL (140289640): as above, the point kept 1e-5 of the segment away from its ends, so a contact at a vertex is nearer
+// one of the vertex's edges than the other. The exe's m_btNearestPointInLineSegment_adjustment (14235ed4d, on unless
+// the "Bullet set" command 14041ba30 clears it) switches it; the clamp is then [0, 1].
+static void rlNearestPointInLineSegment(const btVector3 &point, const btVector3& line0, const btVector3& line1, btVector3& nearestPoint)
+{
+	const btScalar lo = btScalar(1e-5), hi = btScalar(1) - lo;
+	btVector3 lineDelta     = line1 - line0;
+	if ( lineDelta.fuzzyZero())
+	{
+		nearestPoint = line0;
+	}
+	else
+	{
+		btScalar delta = (point-line0).dot(lineDelta) / (lineDelta).dot(lineDelta);
+		if (!(lo <= delta))
+			delta = lo;
+		else if (!(delta <= hi))
+			delta = hi;
+		nearestPoint = line0 + lineDelta*delta;
+	}
+}
+
 
 
 
@@ -511,12 +536,15 @@ void btAdjustInternalEdgeContacts(btManifoldPoint& cp, const btCollisionObjectWr
 	// Get closest edge
 	int      bestedge=-1;
 	btScalar    disttobestedge=BT_LARGE_FLOAT;
+	// RL (1402872d0): each edge's distance by rlNearestPointInLineSegment, and an edge the contact lies on (closer than
+	// SIMD_EPSILON) is adjusted below as the best edge is
+	bool onEdge[3] = {false, false, false};
 	//
 	// Edge 0 -> 1
 	if (btFabs(info->m_edgeV0V1Angle)< triangleInfoMapPtr->m_maxEdgeAngleThreshold)
 	{	
 	   btVector3 nearest;
-	   btNearestPointInLineSegment( cp.m_localPointB, v0, v1, nearest );
+	   rlNearestPointInLineSegment( cp.m_localPointB, v0, v1, nearest );
 	   btScalar     len=(contact-nearest).length();
 	   //
 	   if( len < disttobestedge )
@@ -524,12 +552,13 @@ void btAdjustInternalEdgeContacts(btManifoldPoint& cp, const btCollisionObjectWr
 	      bestedge=0;
 	      disttobestedge=len;
       }	      
+	   onEdge[0] = len < SIMD_EPSILON;
    }	   
 	// Edge 1 -> 2
 	if (btFabs(info->m_edgeV1V2Angle)< triangleInfoMapPtr->m_maxEdgeAngleThreshold)
 	{	
 	   btVector3 nearest;
-	   btNearestPointInLineSegment( cp.m_localPointB, v1, v2, nearest );
+	   rlNearestPointInLineSegment( cp.m_localPointB, v1, v2, nearest );
 	   btScalar     len=(contact-nearest).length();
 	   //
 	   if( len < disttobestedge )
@@ -537,12 +566,13 @@ void btAdjustInternalEdgeContacts(btManifoldPoint& cp, const btCollisionObjectWr
 	      bestedge=1;
 	      disttobestedge=len;
       }	      
+	   onEdge[1] = len < SIMD_EPSILON;
    }	   
 	// Edge 2 -> 0
 	if (btFabs(info->m_edgeV2V0Angle)< triangleInfoMapPtr->m_maxEdgeAngleThreshold)
 	{	
 	   btVector3 nearest;
-	   btNearestPointInLineSegment( cp.m_localPointB, v2, v0, nearest );
+	   rlNearestPointInLineSegment( cp.m_localPointB, v2, v0, nearest );
 	   btScalar     len=(contact-nearest).length();
 	   //
 	   if( len < disttobestedge )
@@ -550,6 +580,7 @@ void btAdjustInternalEdgeContacts(btManifoldPoint& cp, const btCollisionObjectWr
 	      bestedge=2;
 	      disttobestedge=len;
       }	      
+	   onEdge[2] = len < SIMD_EPSILON;
    }   	      	
 	
 #ifdef BT_INTERNAL_EDGE_DEBUG_DRAW
@@ -563,7 +594,7 @@ void btAdjustInternalEdgeContacts(btManifoldPoint& cp, const btCollisionObjectWr
 #endif
 		btScalar len = (contact-nearest).length();
 		if(len<triangleInfoMapPtr->m_edgeDistanceThreshold)
-		if( bestedge==0 )
+		if( bestedge==0 || onEdge[0] )  // RL (1402872d0)
 		{
 			btVector3 edge(v0-v1);
 			isNearEdge = true;
@@ -646,7 +677,7 @@ void btAdjustInternalEdgeContacts(btManifoldPoint& cp, const btCollisionObjectWr
 
 		btScalar len = (contact-nearest).length();
 		if(len<triangleInfoMapPtr->m_edgeDistanceThreshold)
-		if( bestedge==1 )
+		if( bestedge==1 || onEdge[1] )  // RL (1402872d0)
 		{
 			isNearEdge = true;
 #ifdef BT_INTERNAL_EDGE_DEBUG_DRAW
@@ -731,7 +762,7 @@ void btAdjustInternalEdgeContacts(btManifoldPoint& cp, const btCollisionObjectWr
 
 		btScalar len = (contact-nearest).length();
 		if(len<triangleInfoMapPtr->m_edgeDistanceThreshold)
-		if( bestedge==2 )
+		if( bestedge==2 || onEdge[2] )  // RL (1402872d0)
 		{
 			isNearEdge = true;
 #ifdef BT_INTERNAL_EDGE_DEBUG_DRAW
