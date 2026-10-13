@@ -1759,6 +1759,16 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyFinish(btCo
 				m_tmpSolverBodyPool[i].m_originalBody->setWorldTransform(m_tmpSolverBodyPool[i].m_worldTransform);
 
 			m_tmpSolverBodyPool[i].m_originalBody->setCompanionId(-1);
+
+			// RL (1402bde90): a sleeping body the solve left moving wakes; buildIslands no longer wakes it
+			const btVector3& v = body->getLinearVelocity();
+			const btVector3& w = body->getAngularVelocity();
+			if (body->getActivationState() == ISLAND_SLEEPING &&
+				(v.x() != 0 || v.y() != 0 || v.z() != 0 || w.x() != 0 || w.y() != 0 || w.z() != 0))
+			{
+				body->setActivationState(WANTS_DEACTIVATION);
+				body->setDeactivationTime(0.f);
+			}
 		}
 	}
 

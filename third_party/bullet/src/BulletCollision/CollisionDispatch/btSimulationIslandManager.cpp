@@ -276,32 +276,9 @@ void btSimulationIslandManager::buildIslands(btDispatcher* dispatcher,btCollisio
 					colObj0->setActivationState( ISLAND_SLEEPING );
 				}
 			}
-		} else
-		{
-
-			int idx;
-			for (idx=startIslandIndex;idx<endIslandIndex;idx++)
-			{
-				int i = getUnionFind().getElement(idx).m_sz;
-
-				btCollisionObject* colObj0 = collisionObjects[i];
-				if ((colObj0->getIslandTag() != islandId) && (colObj0->getIslandTag() != -1))
-				{
-//					printf("error in island management\n");
-				}
-
-				btAssert((colObj0->getIslandTag() == islandId) || (colObj0->getIslandTag() == -1));
-
-				if (colObj0->getIslandTag() == islandId)
-				{
-					if ( colObj0->getActivationState() == ISLAND_SLEEPING)
-					{
-						colObj0->setActivationState( WANTS_DEACTIVATION);
-						colObj0->setDeactivationTime(0.f);
-					}
-				}
-			}
 		}
+		// RL (140289be0): an awake island leaves its sleeping bodies asleep; the solver wakes one it moves
+		// (btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyFinish)
 	}
 
 	
