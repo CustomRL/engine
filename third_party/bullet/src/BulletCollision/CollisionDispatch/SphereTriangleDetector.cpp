@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.2): collide is one-sided and takes the nearest edge (see collide).
+
 #include "LinearMath/btScalar.h"
 #include "SphereTriangleDetector.h"
 #include "BulletCollision/CollisionShapes/btTriangleShape.h"
@@ -104,12 +106,9 @@ bool SphereTriangleDetector::collide(const btVector3& sphereCenter,btVector3 &po
 	btVector3 p1ToCentre = sphereCenter - vertices[0];
 	btScalar distanceFromPlane = p1ToCentre.dot(normal);
 
+	// RL (14028b5f0): a sphere centre behind the triangle's plane gives no contact; stock 2.82 flips the normal
 	if (distanceFromPlane < btScalar(0.))
-	{
-		//triangle facing the other way
-		distanceFromPlane *= btScalar(-1.);
-		normal *= btScalar(-1.);
-	}
+		return false;
 
 	bool isInsideContactPlane = distanceFromPlane < radiusWithThreshold;
 	
@@ -134,7 +133,8 @@ bool SphereTriangleDetector::collide(const btVector3& sphereCenter,btVector3 &po
 
 				btScalar distanceSqr = SegmentSqrDistance(pa,pb,sphereCenter, nearestOnEdge);
 				if (distanceSqr < contactCapsuleRadiusSqr) {
-					// Yep, we're inside a capsule
+					// Yep, we're inside a capsule. RL (14028b5f0): the nearest edge wins; stock 2.82 keeps the last
+					contactCapsuleRadiusSqr = distanceSqr;
 					hasContact = true;
 					contactPoint = nearestOnEdge;
 				}
