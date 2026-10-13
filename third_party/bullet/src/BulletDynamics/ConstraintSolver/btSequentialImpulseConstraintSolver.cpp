@@ -812,15 +812,6 @@ static void rlAccumulateContact(btRigidBody& body, const btManifoldPoint& cp, co
 	body.m_rlContactRadius += rel_pos.length();
 }
 
-// RL (1402bcb20) sums a point's velocity as (w x r + v) + external force impulse, where stock
-// getVelocityInLocalPointNoDelta sums v + external + w x r
-static btVector3 rlVelocityInLocalPointNoDelta(const btSolverBody& body, const btVector3& rel_pos)
-{
-	if (!body.m_originalBody)
-		return btVector3(0,0,0);
-	return (body.m_angularVelocity+body.m_externalTorqueImpulse).cross(rel_pos) + body.m_linearVelocity + body.m_externalForceImpulse;
-}
-
 void	btSequentialImpulseConstraintSolver::convertContact(btPersistentManifold* manifold,const btContactSolverInfo& infoGlobal)
 {
 	btCollisionObject* colObj0=0,*colObj1=0;
@@ -918,7 +909,11 @@ void btSequentialImpulseConstraintSolver::rlSetupContactFriction(btSolverConstra
 			///
 			if (!(infoGlobal.m_solverMode & SOLVER_ENABLE_FRICTION_DIRECTION_CACHING) || !cp.m_lateralFrictionInitialized)
 			{
-			btVector3 vel = rlVelocityInLocalPointNoDelta(m_tmpSolverBodyPool[solverBodyIdA], rel_pos1) - rlVelocityInLocalPointNoDelta(m_tmpSolverBodyPool[solverBodyIdB], rel_pos2);
+			// RL (1402bcb20) sums these as stock, w x r + (v + external); Ghidra's decompile shows (w x r + v) + external
+			btVector3 vel1, vel2;
+			m_tmpSolverBodyPool[solverBodyIdA].getVelocityInLocalPointNoDelta(rel_pos1,vel1);
+			m_tmpSolverBodyPool[solverBodyIdB].getVelocityInLocalPointNoDelta(rel_pos2,vel2);
+			btVector3 vel = vel1 - vel2;
 			btScalar rel_vel = cp.m_normalWorldOnB.dot(vel);
 				cp.m_lateralFrictionDir1 = vel - cp.m_normalWorldOnB * rel_vel;
 				btScalar lat_rel_vel = cp.m_lateralFrictionDir1.length2();
