@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.3): a ray against a plane (see rayTestSingleInternal).
+
 #include "btCollisionWorld.h"
 #include "btCollisionDispatcher.h"
 #include "BulletCollision/CollisionDispatch/btCollisionObject.h"
@@ -279,7 +281,23 @@ void	btCollisionWorld::rayTestSingleInternal(const btTransform& rayFromTrans,con
 	const btCollisionShape* collisionShape = collisionObjectWrap->getCollisionShape();
 	const btTransform& colObjWorldTransform = collisionObjectWrap->getWorldTransform();
 
-	if (collisionShape->isConvex())
+	if (collisionShape->getShapeType() == STATIC_PLANE_PROXYTYPE)
+	{
+		// RL (14027b670): the plane z = 0 of its frame, hit from the front alone and unbounded, by its distance along the
+		// ray. Stock 2.82 took the generic concave case, two triangles cut from the plane around the ray.
+		const btVector3 n = colObjWorldTransform.getBasis() * btVector3(0, 0, 1);
+		const btScalar along = -(rayToTrans.getOrigin() - rayFromTrans.getOrigin()).dot(n);
+		const btScalar height = -(colObjWorldTransform.getOrigin() - rayFromTrans.getOrigin()).dot(n);
+		if (SIMD_EPSILON < along && SIMD_EPSILON < height && height <= along)
+		{
+			const btScalar fraction = height / along;
+			if (fraction < resultCallback.m_closestHitFraction)
+			{
+				btCollisionWorld::LocalRayResult localRayResult(collisionObjectWrap->getCollisionObject(), 0, n, fraction);
+				resultCallback.addSingleResult(localRayResult, true);
+			}
+		}
+	} else if (collisionShape->isConvex())
 	{
 		//		BT_PROFILE("rayTestConvex");
 		btConvexCast::CastResult castResult;
