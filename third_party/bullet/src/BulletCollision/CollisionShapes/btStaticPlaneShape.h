@@ -34,7 +34,7 @@ protected:
 
 public:
 	// RL: the plane is bounded in its local X and Y (shape +0x20, +0x24); btConvexPlaneCollisionAlgorithm::processCollision
-	// (140294fb0) keeps only contacts inside them. The stock constructor leaves them unbounded.
+	// (140294fb0) keeps only contacts inside them, and rlGetAddAabb boxes them. The stock constructor leaves them unbounded.
 	btScalar	m_rlHalfExtentX;
 	btScalar	m_rlHalfExtentY;
 
@@ -49,6 +49,8 @@ public:
 
 
 	virtual void getAabb(const btTransform& t,btVector3& aabbMin,btVector3& aabbMax) const;
+
+	virtual void rlGetAddAabb(const btTransform& t,btVector3& aabbMin,btVector3& aabbMax) const;
 
 	virtual void	processAllTriangles(btTriangleCallback* callback,const btVector3& aabbMin,const btVector3& aabbMax) const;
 

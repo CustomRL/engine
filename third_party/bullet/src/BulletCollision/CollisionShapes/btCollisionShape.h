@@ -13,6 +13,9 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): the box a shape enters the broadphase with
+// (rlGetAddAabb).
+
 #ifndef BT_COLLISION_SHAPE_H
 #define BT_COLLISION_SHAPE_H
 
@@ -44,6 +47,14 @@ public:
 
 	///getAabb returns the axis aligned bounding box in the coordinate frame of the given transform t.
 	virtual void getAabb(const btTransform& t,btVector3& aabbMin,btVector3& aabbMax) const =0;
+
+	// RL: the box btCollisionWorld::addCollisionObject (140270f30) creates the proxy with, a virtual RL added after
+	// getAabb. It is getAabb by default (140278040); RL's bounded plane has its own. updateAabbs and the narrowphase
+	// take getAabb.
+	virtual void rlGetAddAabb(const btTransform& t,btVector3& aabbMin,btVector3& aabbMax) const
+	{
+		getAabb(t,aabbMin,aabbMax);
+	}
 
 	virtual void	getBoundingSphere(btVector3& center,btScalar& radius) const;
 

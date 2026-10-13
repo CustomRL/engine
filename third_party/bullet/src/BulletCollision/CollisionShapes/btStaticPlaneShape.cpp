@@ -13,7 +13,7 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): RL's bounded plane constructor.
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.1): RL's bounded plane constructor and its broadphase box.
 
 #include "btStaticPlaneShape.h"
 
@@ -68,6 +68,35 @@ void btStaticPlaneShape::getAabb(const btTransform& t,btVector3& aabbMin,btVecto
 
 
 
+
+// RL (1402a6730): the bounded plane enters the broadphase as a box, the stock plane as getAabb
+void btStaticPlaneShape::rlGetAddAabb(const btTransform& t,btVector3& aabbMin,btVector3& aabbMax) const
+{
+	if (m_rlHalfExtentX < btScalar(BT_LARGE_FLOAT))
+	{
+		// the bounded rectangle's corners, then each swept BT_LARGE_FLOAT down the plane's z, summed in the asm's order
+		const btMatrix3x3& b = t.getBasis();
+		const btVector3& o = t.getOrigin();
+		const btScalar hx = m_rlHalfExtentX, hy = m_rlHalfExtentY, zx = hx * btScalar(0.), zy = hy * btScalar(0.), nz = -btScalar(0.);
+		btVector3 ex, ey, ez;
+		for (int r = 0; r < 3; r++)
+		{
+			ex[r] = (b[r][0] * hx + b[r][1] * zx) + b[r][2] * zx;
+			ey[r] = (b[r][0] * zy + b[r][1] * hy) + b[r][2] * zy;
+			ez[r] = (b[r][0] * nz + b[r][1] * nz) - b[r][2] * btScalar(BT_LARGE_FLOAT);
+		}
+		const btVector3 c[4] = {(o - ex) - ey, (o + ex) + ey, (o - ex) + ey, (o + ex) - ey};
+		aabbMin = aabbMax = c[0];
+		for (int i = 1; i < 8; i++)
+		{
+			const btVector3 p = i < 4 ? c[i] : c[i - 4] + ez;
+			aabbMin.setMin(p);
+			aabbMax.setMax(p);
+		}
+		return;
+	}
+	getAabb(t,aabbMin,aabbMax);
+}
 
 void	btStaticPlaneShape::processAllTriangles(btTriangleCallback* callback,const btVector3& aabbMin,const btVector3& aabbMax) const
 {

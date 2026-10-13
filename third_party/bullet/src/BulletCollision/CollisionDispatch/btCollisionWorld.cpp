@@ -13,7 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.3): a ray against a plane (see rayTestSingleInternal).
+// Altered for Rocket League build 261001 (rl-direct-clone roadmap 10.3): a ray against a plane (see rayTestSingleInternal),
+// and a new object's proxy box (see addCollisionObject).
 
 #include "btCollisionWorld.h"
 #include "btCollisionDispatcher.h"
@@ -125,7 +126,8 @@ void	btCollisionWorld::addCollisionObject(btCollisionObject* collisionObject,sho
 
 	btVector3	minAabb;
 	btVector3	maxAabb;
-	collisionObject->getCollisionShape()->getAabb(trans,minAabb,maxAabb);
+	// RL (140270f30): the shape's add box, not getAabb
+	collisionObject->getCollisionShape()->rlGetAddAabb(trans,minAabb,maxAabb);
 
 	int type = collisionObject->getCollisionShape()->getShapeType();
 	collisionObject->setBroadphaseHandle( getBroadphase()->createProxy(
