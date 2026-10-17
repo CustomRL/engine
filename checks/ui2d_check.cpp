@@ -102,8 +102,8 @@ void ui2dChecks(gpu::Device& device) {
     // a square ring (two closed runs, even-odd), a rectangle whose left edge halves a column, the left half as a mask
     const float points[][2] = {{8, 8},     {40, 8},  {40, 40}, {8, 40},  {8, 8},    {16, 16}, {32, 16}, {32, 32}, {16, 32},
                                {16, 16},   {44.5f, 8}, {56, 8}, {56, 20}, {44.5f, 20}, {44.5f, 8}, {0, 0},  {32, 0},  {32, 64},
-                               {0, 64},    {0, 0}};
-    const uint32_t ring[] = {0, 5, 5, 5}, edge[] = {10, 5}, half[] = {15, 5};
+                               {0, 64},    {0, 0},   {2, 2},   {6, 2},   {6, 6},   {2, 6},    {2, 2}};
+    const uint32_t ring[] = {0, 5, 5, 5}, edge[] = {10, 5}, half[] = {15, 5}, square[] = {20, 5};
     std::vector<uint32_t> indices;
     ui2d::fanTriangles(ring, 2, indices);
     const uint32_t ringCount = uint32_t(indices.size());
@@ -111,6 +111,8 @@ void ui2dChecks(gpu::Device& device) {
     const uint32_t edgeCount = uint32_t(indices.size()) - ringCount;
     ui2d::fanTriangles(half, 1, indices);
     const uint32_t halfCount = uint32_t(indices.size()) - ringCount - edgeCount;
+    ui2d::fanTriangles(square, 1, indices);
+    const uint32_t squareCount = uint32_t(indices.size()) - ringCount - edgeCount - halfCount;
     const ui2d::FillMesh mesh = ui2d::createFillMesh(device, &points[0][0], uint32_t(std::size(points)), indices.data(), uint32_t(indices.size()));
 
     auto shapes = [&] {
@@ -183,6 +185,29 @@ void ui2dChecks(gpu::Device& device) {
         CHECK(pixelIs(px, 4, 4, 255, 0, 0, 255) && pixelIs(px, 12, 4, 0, 255, 0, 255) && pixelIs(px, 4, 12, 255, 255, 255, 255));
     }
 
+    // a 9-slice grid: 0-4 and 12-16 of the grid's space kept, 4-12 stretched to 4-60. A fan's square 2-6 goes to 2-18;
+    // a 4x1 bitmap (red, green, blue, white) across a rectangle 0-8 scaled by 2 into the grid stretches piece by piece
+    {
+        ui2d::Scale9 grid{{0, 4, 12, 16}, {0, 4, 60, 64}, {0, 4, 12, 16}, {0, 4, 60, 64}};
+        const uint32_t strip[] = {0xff0000ff, 0xff00ff00, 0xffff0000, 0xffffffff};
+        const gpu::Texture colors = gpu::createTexture2D(device, 4, 1, gpu::TextureFormat::Rgba8, strip, false);
+        canvas.begin(t.view.Get(), kSize, kSize, identity, true, t.stencilView.Get());
+        ui2d::Fill f = solid(0, 0, 8, 8, {1, 1, 1, 1});
+        f.texture = colors.view.Get(), f.grid = &grid;
+        f.matrix._11 = f.matrix._22 = 2;
+        f.paint = {1 / 8.f, 0, 0, 0, 0, 0.5f};
+        canvas.fill(f);
+        ui2d::Fill s = solid(2, 2, 6, 6, {1, 0, 1, 1});
+        s.mesh = &mesh, s.firstIndex = ringCount + edgeCount + halfCount, s.indexCount = squareCount, s.grid = &grid;
+        canvas.fill(s);
+        canvas.end();
+        px = resolve(device, t);
+        CHECK(pixelIs(px, 10, 10, 255, 0, 255, 255) && pixelIs(px, 17, 17, 255, 0, 255, 255));  // the square, 2-18
+        CHECK(pixelIs(px, 1, 32, 255, 0, 0, 255) && pixelIs(px, 19, 32, 0, 241, 14, 255, 4));  // past it: the strip
+        CHECK(pixelIs(px, 2, 40, 223, 32, 0, 255, 4) && pixelIs(px, 62, 40, 255, 255, 255, 255) && pixelIs(px, 32, 40, 0, 123, 132, 255, 4));
+        CHECK(pixelIs(px, 5, 40, 114, 141, 0, 255, 4));  // 4.21 in the grid's space: 45% red, 55% green
+    }
+
     // a black-to-white ramp across the target; straight alpha premultiplied on the way out; a transform; red plus green added
     uint32_t greys[256];
     const uint8_t ends[] = {0, 255};
@@ -206,7 +231,7 @@ void ui2dChecks(gpu::Device& device) {
     px = resolve(device, t);
     CHECK(pixelIs(px, 32, 4, 130, 130, 130, 255, 3) && pixelIs(px, 0, 4, 2, 2, 2, 255, 2) && pixelIs(px, 63, 4, 253, 253, 253, 255, 2));
     CHECK(pixelIs(px, 32, 20, 128, 128, 0, 255) && pixelIs(px, 32, 36, 128, 255, 255, 255) && pixelIs(px, 32, 52, 128, 128, 128, 128));
-    std::printf("ui2d fills: ok (%ux MSAA; even-odd hole, half-covered edge, nested masks lifted, bitmap repeat and clamp, ramp, "
+    std::printf("ui2d fills: ok (%ux MSAA; even-odd hole, half-covered edge, nested masks lifted, bitmap repeat and clamp, 9-slice, ramp, "
                 "straight alpha, transform, add; no allocation in a repeated frame)\n",
                 t.samples);
 }

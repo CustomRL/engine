@@ -164,7 +164,7 @@ void Canvas::draw(const Quad& q) {
         last->level == level_)
         last->count++;
     else
-        commands_.push_back({Kind::Quads, q.blend, masking_, false, level_, texture, nullptr, uint32_t(vertices_.size() / 4), 1, 0, {}});
+        commands_.push_back({Kind::Quads, q.blend, masking_, false, level_, false, texture, nullptr, uint32_t(vertices_.size() / 4), 1, 0, {}});
     const XMMATRIX m = XMLoadFloat4x4(&q.matrix) * XMLoadFloat4x4(&toClip_);
     const float x0 = q.rect[0], y0 = q.rect[1], x1 = x0 + q.rect[2], y1 = y0 + q.rect[3];
     const float corners[4][4] = {{x0, y0, 0, 0}, {x1, y0, 1, 0}, {x1, y1, 1, 1}, {x0, y1, 0, 1}};
@@ -184,7 +184,7 @@ void Canvas::draw(const Quad& q) {
 }
 
 void Canvas::clip(const std::array<int, 4>* rect) {
-    commands_.push_back({rect ? Kind::Clip : Kind::NoClip, Blend::Normal, false, false, 0, nullptr, nullptr, 0, 0, 0, rect ? *rect : std::array<int, 4>{}});
+    commands_.push_back({rect ? Kind::Clip : Kind::NoClip, Blend::Normal, false, false, 0, false, nullptr, nullptr, 0, 0, 0, rect ? *rect : std::array<int, 4>{}});
 }
 
 void Canvas::end() {
