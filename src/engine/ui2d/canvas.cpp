@@ -62,8 +62,6 @@ float4 ps(Pixel p) : SV_Target {
 }
 )";
 
-constexpr size_t MAX_QUADS = 16384;  // 16-bit indices
-
 void check(HRESULT hr, const char* what) {
     if (FAILED(hr))
         fatal("%s failed: 0x%08lx", what, static_cast<unsigned long>(hr));
@@ -88,7 +86,7 @@ ColorTransform ColorTransform::after(const ColorTransform& inner) const {
     return out;
 }
 
-Canvas::Canvas(gpu::Device& device) : device_(device) {
+Canvas::Canvas(gpu::Device& device) : device_(device), ring_(device) {
     auto* d3d = device.d3d();
     const auto vs = compile("vs", "vs_5_0"), ps = compile("ps", "ps_5_0");
     check(d3d->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(), nullptr, &vertexShader_), "CreateVertexShader (ui2d)");
@@ -137,45 +135,44 @@ Canvas::Canvas(gpu::Device& device) : device_(device) {
     sampler.AddressU = sampler.AddressV = sampler.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
     sampler.MaxLOD = D3D11_FLOAT32_MAX;
     check(d3d->CreateSamplerState(&sampler, &sampler_), "CreateSamplerState (ui2d)");
+    sampler.AddressU = sampler.AddressV = sampler.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    check(d3d->CreateSamplerState(&sampler, &wrap_), "CreateSamplerState (ui2d wrap)");
     const uint32_t white = 0xffffffff;
     white_ = gpu::createTexture2D(device, 1, 1, gpu::TextureFormat::Rgba8, &white, false);
+    createFillPipeline();
 }
 
-void Canvas::begin(ID3D11RenderTargetView* target, int width, int height, const XMFLOAT4X4& stageToTarget, bool clear) {
-    auto* context = device_.context();
-    if (clear) {
-        const float none[4] = {0, 0, 0, 0};
-        context->ClearRenderTargetView(target, none);
-    }
+void Canvas::begin(ID3D11RenderTargetView* target, int width, int height, const XMFLOAT4X4& stageToTarget, bool clear,
+                   ID3D11DepthStencilView* stencil) {
+    target_ = target, stencil_ = stencil, width_ = width, height_ = height, clear_ = clear;
     // target pixels to clip space for row vectors: x' = 2x / width - w, y' = w - 2y / height
     const XMMATRIX toClip(2.0f / width, 0, 0, 0, 0, -2.0f / height, 0, 0, 0, 0, 1, 0, -1, 1, 0, 1);
     XMStoreFloat4x4(&toClip_, XMLoadFloat4x4(&stageToTarget) * toClip);
-    const D3D11_VIEWPORT viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
-    context->OMSetRenderTargets(1, &target, nullptr);
-    context->OMSetDepthStencilState(nullptr, 0);
-    context->RSSetViewports(1, &viewport);
-    context->RSSetState(rasterizer_.Get());
-    context->IASetInputLayout(layout_.Get());
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    context->IASetIndexBuffer(indices_.Get(), DXGI_FORMAT_R16_UINT, 0);
-    context->VSSetShader(vertexShader_.Get(), nullptr, 0);
-    context->PSSetShader(pixelShader_.Get(), nullptr, 0);
-    ID3D11SamplerState* sampler = sampler_.Get();
-    context->PSSetSamplers(0, 1, &sampler);
+    vertices_.clear();
+    commands_.clear();
+    maskCorners_.clear();
+    maskStarts_.clear();
+    ring_.reset();
+    level_ = 0;
+    masking_ = false;
 }
 
 void Canvas::draw(const Quad& q) {
     ID3D11ShaderResourceView* texture = q.texture ? q.texture : white_.view.Get();
-    if (!vertices_.empty() && (texture != texture_ || q.blend != blend_ || vertices_.size() >= MAX_QUADS * 4))
-        flush();
-    texture_ = texture;
-    blend_ = q.blend;
+    Command* last = commands_.empty() ? nullptr : &commands_.back();
+    if (last && last->kind == Kind::Quads && last->texture == texture && last->blend == q.blend && last->mask == masking_ &&
+        last->level == level_)
+        last->count++;
+    else
+        commands_.push_back({Kind::Quads, q.blend, masking_, false, level_, texture, nullptr, uint32_t(vertices_.size() / 4), 1, 0, {}});
     const XMMATRIX m = XMLoadFloat4x4(&q.matrix) * XMLoadFloat4x4(&toClip_);
     const float x0 = q.rect[0], y0 = q.rect[1], x1 = x0 + q.rect[2], y1 = y0 + q.rect[3];
     const float corners[4][4] = {{x0, y0, 0, 0}, {x1, y0, 1, 0}, {x1, y1, 1, 1}, {x0, y1, 0, 1}};
     for (const auto& c : corners) {
         XMFLOAT4 p;
         XMStoreFloat4(&p, XMVector4Transform(XMVectorSet(c[0], c[1], 0, 1), m));
+        if (masking_)
+            maskCorners_.push_back(p);
         Vertex v{{p.x, p.y, 0, p.w},
                  {c[2] ? q.uv[2] : q.uv[0], c[3] ? q.uv[3] : q.uv[1]},
                  {c[2], c[3]},
@@ -186,10 +183,18 @@ void Canvas::draw(const Quad& q) {
     }
 }
 
-void Canvas::flush() {
-    if (vertices_.empty())
-        return;
+void Canvas::clip(const std::array<int, 4>* rect) {
+    commands_.push_back({rect ? Kind::Clip : Kind::NoClip, Blend::Normal, false, false, 0, nullptr, nullptr, 0, 0, 0, rect ? *rect : std::array<int, 4>{}});
+}
+
+void Canvas::end() {
     auto* context = device_.context();
+    if (clear_) {
+        const float none[4] = {0, 0, 0, 0};
+        context->ClearRenderTargetView(target_, none);
+    }
+    if (stencil_)
+        context->ClearDepthStencilView(stencil_, D3D11_CLEAR_STENCIL, 1, 0);
     if (vertices_.size() > capacity_) {
         capacity_ = std::max(vertices_.size(), capacity_ * 2);
         D3D11_BUFFER_DESC desc{};
@@ -199,35 +204,20 @@ void Canvas::flush() {
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         check(device_.d3d()->CreateBuffer(&desc, nullptr, &buffer_), "CreateBuffer (ui2d vertices)");
     }
-    D3D11_MAPPED_SUBRESOURCE mapped;
-    check(context->Map(buffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped), "Map (ui2d vertices)");
-    std::memcpy(mapped.pData, vertices_.data(), vertices_.size() * sizeof(Vertex));
-    context->Unmap(buffer_.Get(), 0);
-    ID3D11Buffer* buffer = buffer_.Get();
-    const UINT stride = sizeof(Vertex), offset = 0;
-    context->IASetVertexBuffers(0, 1, &buffer, &stride, &offset);
-    context->PSSetShaderResources(0, 1, &texture_);
-    context->OMSetBlendState(blends_[blend_ == Blend::Add ? 1 : 0].Get(), nullptr, 0xffffffff);
-    context->DrawIndexed(static_cast<UINT>(vertices_.size() / 4 * 6), 0, 0);
-    vertices_.clear();
-}
-
-void Canvas::clip(const std::array<int, 4>* rect) {
-    flush();
-    auto* context = device_.context();
-    if (!rect) {
-        context->RSSetState(rasterizer_.Get());
-        return;
+    if (!vertices_.empty()) {
+        D3D11_MAPPED_SUBRESOURCE mapped;
+        check(context->Map(buffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped), "Map (ui2d vertices)");
+        std::memcpy(mapped.pData, vertices_.data(), vertices_.size() * sizeof(Vertex));
+        context->Unmap(buffer_.Get(), 0);
     }
-    const D3D11_RECT r{(*rect)[0], (*rect)[1], (*rect)[2], (*rect)[3]};
-    context->RSSetScissorRects(1, &r);
-    context->RSSetState(scissor_.Get());
-}
-
-void Canvas::end() {
-    flush();
+    ring_.upload();
+    const D3D11_VIEWPORT viewport{0, 0, static_cast<float>(width_), static_cast<float>(height_), 0, 1};
+    context->OMSetRenderTargets(1, &target_, stencil_);
+    context->RSSetViewports(1, &viewport);
+    context->RSSetState(rasterizer_.Get());
+    replay();
     ID3D11ShaderResourceView* none = nullptr;
-    device_.context()->PSSetShaderResources(0, 1, &none);
+    context->PSSetShaderResources(0, 1, &none);
 }
 
 }

@@ -44,6 +44,8 @@ add_library(engine STATIC
     src/engine/platform/window.cpp
     src/engine/render/lines.cpp
     src/engine/ui2d/canvas.cpp
+    src/engine/ui2d/canvas_fill.cpp
+    src/engine/ui2d/fill.cpp
     src/engine/ui2d/font.cpp
     src/engine/ui2d/glow.cpp
     src/engine/ui2d/image.cpp)
@@ -73,7 +75,7 @@ if(ENGINE_COUNT_ALLOCS)
     target_compile_definitions(engine_alloc_count PUBLIC ENGINE_COUNT_ALLOCS)
 endif()
 
-add_executable(engine_check checks/engine_check.cpp checks/log_assert_check.cpp checks/streaming_check.cpp)
+add_executable(engine_check checks/engine_check.cpp checks/log_assert_check.cpp checks/streaming_check.cpp checks/ui2d_check.cpp)
 target_include_directories(engine_check PRIVATE ${Stb_INCLUDE_DIR})
 target_link_libraries(engine_check PRIVATE engine engine_alloc_count)
 target_compile_options(engine_check PRIVATE /W4 /permissive-)

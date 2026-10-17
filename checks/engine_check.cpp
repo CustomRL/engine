@@ -1,5 +1,5 @@
 // Checks for the engine's core and GPU utilities: arena, pool, allocation counter, logging and asserts, PNG writer, constant ring, GPU profiler, frame
-// clock, and (streaming_check.cpp) texture formats, pack sets and the texture streamer. Exits 0 when every check passes; a failure names
+// clock, (streaming_check.cpp) texture formats, pack sets and the texture streamer, and (ui2d_check.cpp) the 2D canvas's fills and masks. Exits 0 when every check passes; a failure names
 // its line and exits 1. Needs a D3D11 GPU (no window).
 #include "engine/core/arena.h"
 #include "engine/core/fatal.h"
@@ -33,6 +33,7 @@ using namespace engine;
 [[noreturn]] void assertChild(const char* logPath);
 void logAndAssertChecks(const char* self);
 void streamingChecks(gpu::Device& device);
+void ui2dChecks(gpu::Device& device);
 
 static void arenaAndPool() {
     Arena arena(1 << 20);
@@ -260,6 +261,7 @@ int main(int argc, char** argv) {
     constantRing(device);
     gpuTimers(device);
     streamingChecks(device);
+    ui2dChecks(device);
     std::printf("engine_check: ok\n");
     return 0;
 }
