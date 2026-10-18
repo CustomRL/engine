@@ -1,18 +1,18 @@
 #pragma once
 
+#include "engine/core/arena.h"
 #include "engine/gpu/device.h"
 
 #include <d3d11_1.h>
 
 #include <cstdint>
-#include <vector>
 
 namespace engine::gpu {
 
 // The per-draw constants of one pass: every draw's values are staged on the CPU, written to one dynamic buffer with a single
 // Map(WRITE_DISCARD), and bound by offset (ID3D11DeviceContext1::*SetConstantBuffers1, in 256-byte slices). Without constant buffer
-// offsetting, a shared 64 KB buffer per stage is rewritten before each draw instead. The staging grows to the largest frame seen, then
-// stops allocating.
+// offsetting, a shared 64 KB buffer per stage is rewritten before each draw instead. The staging grows in an arena to the largest
+// frame seen, never through operator new.
 class ConstantRing {
 public:
     enum class Stage { Vertex, Pixel };
@@ -33,7 +33,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11DeviceContext1> context1_;
     Microsoft::WRL::ComPtr<ID3D11Buffer> buffer_, fallback_[2];
     size_t capacity_ = 0;
-    std::vector<float> staged_;
+    Arena staging_{size_t(256) << 20};
+    GrowArray<float> staged_{staging_};
 };
 
 }

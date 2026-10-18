@@ -47,7 +47,7 @@ ConstantRing::ConstantRing(Device& device) : device_(device) {
 uint32_t ConstantRing::push(const float* values, size_t count, int float4s) {
     const uint32_t offset = static_cast<uint32_t>(staged_.size() / 4);
     const size_t slice = static_cast<size_t>((std::max(float4s, 1) + SLICE - 1) / SLICE * SLICE) * 4;
-    staged_.resize(staged_.size() + slice, 0.0f);
+    staged_.resize(staged_.size() + slice);
     std::memcpy(&staged_[offset * 4], values, std::min(count, slice) * sizeof(float));
     return offset;
 }
