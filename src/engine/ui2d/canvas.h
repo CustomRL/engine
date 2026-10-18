@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/core/arena.h"
 #include "engine/gpu/constant_ring.h"
 #include "engine/gpu/device.h"
 #include "engine/gpu/texture.h"
@@ -8,7 +9,6 @@
 #include <DirectXMath.h>
 
 #include <array>
-#include <vector>
 
 namespace engine::ui2d {
 
@@ -115,10 +115,11 @@ private:
     void replay();
 
     gpu::Device& device_;
-    std::vector<Vertex> vertices_;
-    std::vector<Command> commands_;
-    std::vector<DirectX::XMFLOAT4> maskCorners_;  // the clip-space corners of the masks' pieces, innermost last
-    std::vector<uint32_t> maskStarts_;            // each mask's first corner
+    Arena lists_{size_t(256) << 20};  // the lists below grow in it, a frame's high water at a time
+    GrowArray<Vertex> vertices_{lists_};
+    GrowArray<Command> commands_{lists_};
+    GrowArray<DirectX::XMFLOAT4> maskCorners_{lists_};  // the clip-space corners of the masks' pieces, innermost last
+    GrowArray<uint32_t> maskStarts_{lists_};            // each mask's first corner
     uint8_t level_ = 0;
     bool masking_ = false;
     size_t capacity_ = 0;
