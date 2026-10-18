@@ -1,4 +1,4 @@
-// Checks for the engine's core and GPU utilities: arena, pool, allocation counter, logging and asserts, PNG writer, constant ring, GPU profiler, frame
+// Checks for the engine's core and GPU utilities: arena, pool, grow array, allocation counter, logging and asserts, PNG writer, constant ring, GPU profiler, frame
 // clock, (streaming_check.cpp) texture formats, pack sets and the texture streamer, and (ui2d_check.cpp) the 2D canvas's fills and masks. Exits 0 when every check passes; a failure names
 // its line and exits 1. Needs a D3D11 GPU (no window).
 #include "engine/core/arena.h"
@@ -77,7 +77,23 @@ static void arenaAndPool() {
     for (auto* it : items)
         pool.free(it);
     CHECK(pool.used() == 0);
-    std::printf("arena, pool: ok\n");
+
+    // a GrowArray grows in its arena, never through operator new, and keeps its order through insert and erase
+    Arena kept(1 << 20);
+    GrowArray<int> g(kept);
+    const uint64_t before = allocationCount();
+    for (int i = 0; i < 100; i++)
+        g.push_back(i);
+    g.insert(g.begin() + 1, g[50]);
+    g.erase(g.begin() + 2, g.begin() + 4);
+    CHECK(allocationCount() == before && g.size() == 99 && g[0] == 0 && g[1] == 50 && g[2] == 3 && g.back() == 99);
+    GrowArray<int> copy = g;
+    copy[0] = 7;
+    CHECK(g[0] == 0 && copy.size() == 99 && copy.data() != g.data());
+    g.clear();
+    g.push_back(5);
+    CHECK(g.size() == 1 && g[0] == 5);
+    std::printf("arena, pool, grow array: ok\n");
 }
 
 static void allocationCounter() {
