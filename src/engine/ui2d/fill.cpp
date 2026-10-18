@@ -12,14 +12,14 @@ FillMesh createFillMesh(gpu::Device& device, const float* points, uint32_t point
             gpu::createBuffer(device, D3D11_BIND_INDEX_BUFFER, indices, indexCount * sizeof(uint32_t))};
 }
 
-void fanTriangles(const uint32_t* runs, uint32_t runCount, std::vector<uint32_t>& out) {
+void fanTriangles(const uint32_t* runs, uint32_t runCount, GrowArray<uint32_t>& out) {
     if (!runCount)
         return;
     const uint32_t apex = runs[0];
     for (uint32_t r = 0; r < runCount; r++)
         for (uint32_t p = runs[2 * r], end = p + runs[2 * r + 1] - 1; p < end; p++)
             if (p != apex && p + 1 != apex)
-                out.insert(out.end(), {apex, p, p + 1});
+                out.push_back(apex), out.push_back(p), out.push_back(p + 1);
 }
 
 void gradientRamp(const uint8_t* ratios, const uint32_t* colors, int count, uint32_t out[256]) {

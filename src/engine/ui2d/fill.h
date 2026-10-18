@@ -1,9 +1,9 @@
 #pragma once
 
+#include "engine/core/arena.h"
 #include "engine/gpu/device.h"
 
 #include <cstdint>
-#include <vector>
 
 namespace engine::ui2d {
 
@@ -18,7 +18,7 @@ FillMesh createFillMesh(gpu::Device& device, const float* points, uint32_t point
 
 // Appends to out the fan of the polylines runs[2k] (first point), runs[2k + 1] (point count): a triangle from the
 // first run's first point to each segment, but not to those that start or end at that point (they have no area)
-void fanTriangles(const uint32_t* runs, uint32_t runCount, std::vector<uint32_t>& out);
+void fanTriangles(const uint32_t* runs, uint32_t runCount, GrowArray<uint32_t>& out);
 
 // Flash's gradient as 256 straight RGBA8 texels (R in the low byte), from count stops (ratios 0-255 ascending, colours
 // 0xAARRGGBB): each texel mixes the stops either side of its ratio linearly, and past the first or last stop takes

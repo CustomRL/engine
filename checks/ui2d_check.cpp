@@ -104,7 +104,8 @@ void ui2dChecks(gpu::Device& device) {
                                {16, 16},   {44.5f, 8}, {56, 8}, {56, 20}, {44.5f, 20}, {44.5f, 8}, {0, 0},  {32, 0},  {32, 64},
                                {0, 64},    {0, 0},   {2, 2},   {6, 2},   {6, 6},   {2, 6},    {2, 2}};
     const uint32_t ring[] = {0, 5, 5, 5}, edge[] = {10, 5}, half[] = {15, 5}, square[] = {20, 5};
-    std::vector<uint32_t> indices;
+    Arena fans(size_t(1) << 16);
+    GrowArray<uint32_t> indices(fans);
     ui2d::fanTriangles(ring, 2, indices);
     const uint32_t ringCount = uint32_t(indices.size());
     ui2d::fanTriangles(edge, 1, indices);
