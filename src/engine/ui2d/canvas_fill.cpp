@@ -230,7 +230,7 @@ void Canvas::replay() {
                 context->PSSetShaderResources(0, 1, &c.texture);
                 context->PSSetSamplers(0, 1, &sampler);
             }
-            context->OMSetBlendState(color ? blends_[c.blend == Blend::Add].Get() : noColor_.Get(), nullptr, 0xffffffff);
+            context->OMSetBlendState(color ? blends_[int(c.blend)].Get() : noColor_.Get(), nullptr, 0xffffffff);
             context->OMSetDepthStencilState(c.kind == Kind::Pop ? pop_.Get() : c.mask ? maskQuad_.Get() : content_.Get(), c.level);
             for (size_t q = 0; q < c.count; q += MAX_QUADS)
                 context->DrawIndexed(UINT(std::min(c.count - q, MAX_QUADS) * 6), 0, INT((c.first + q) * 4));
@@ -262,7 +262,7 @@ void Canvas::replay() {
                 ring_.bind(pixel, 0, c.constants, kCoverFloat4s);
                 context->PSSetShaderResources(0, 1, &c.texture);
                 context->PSSetSamplers(0, 1, &sampler);
-                context->OMSetBlendState(blends_[c.blend == Blend::Add].Get(), nullptr, 0xffffffff);
+                context->OMSetBlendState(blends_[int(c.blend)].Get(), nullptr, 0xffffffff);
                 context->OMSetDepthStencilState(c.counted ? cover_.Get() : content_.Get(), c.level);
             }
             context->Draw(4, 0);

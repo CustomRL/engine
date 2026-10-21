@@ -1,6 +1,6 @@
 // Checks for the 2D canvas's fills and masks, drawn into a multisampled target and read back resolved: an even-odd hole, a half-covered
-// edge, nested masks lifted again, a repeating and a clamped bitmap, a gradient's ramp, straight alpha, a colour transform and additive
-// blending; and no allocation in a frame once the first has sized the canvas.
+// edge, nested masks lifted again, a repeating and a clamped bitmap, a gradient's ramp, straight alpha, a colour transform, additive
+// and multiplied blending; and no allocation in a frame once the first has sized the canvas.
 #include "engine/core/arena.h"
 #include "engine/core/fatal.h"
 #include "engine/ui2d/canvas.h"
@@ -228,11 +228,17 @@ void ui2dChecks(gpu::Device& device) {
     tinted.transform = {{0.5f, 1, 1, 1}, {0, 0, 0.25f, 0}};
     canvas.fill(tinted);
     canvas.fill(solid(0, 48, 64, 56, {1, 1, 1, 0.5f}));
+    // multiplied at half alpha over (255, 128, 255): Flash's Cd (1 - As) + Cd Cs As, so Cd (0.5 + 0.5 Cs)
+    canvas.fill(solid(0, 56, 64, 64, {1, 0.5f, 1, 1}));
+    ui2d::Fill multiply = solid(0, 56, 64, 64, {0.5f, 1, 0, 0.5f});
+    multiply.blend = ui2d::Blend::Multiply;
+    canvas.fill(multiply);
     canvas.end();
     px = resolve(device, t);
     CHECK(pixelIs(px, 32, 4, 130, 130, 130, 255, 3) && pixelIs(px, 0, 4, 2, 2, 2, 255, 2) && pixelIs(px, 63, 4, 253, 253, 253, 255, 2));
     CHECK(pixelIs(px, 32, 20, 128, 128, 0, 255) && pixelIs(px, 32, 36, 128, 255, 255, 255) && pixelIs(px, 32, 52, 128, 128, 128, 128));
+    CHECK(pixelIs(px, 32, 60, 191, 128, 128, 255, 2));
     std::printf("ui2d fills: ok (%ux MSAA; even-odd hole, half-covered edge, nested masks lifted, bitmap repeat and clamp, 9-slice, ramp, "
-                "straight alpha, transform, add; no allocation in a repeated frame)\n",
+                "straight alpha, transform, add, multiply; no allocation in a repeated frame)\n",
                 t.samples);
 }

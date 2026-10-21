@@ -113,12 +113,14 @@ Canvas::Canvas(gpu::Device& device) : device_(device), ring_(device) {
     const D3D11_SUBRESOURCE_DATA init{indices.data(), 0, 0};
     check(d3d->CreateBuffer(&desc, &init, &indices_), "CreateBuffer (ui2d indices)");
 
-    for (int b = 0; b < 2; b++) {
+    for (int b = 0; b < 3; b++) {  // Blend's order; Multiply's alpha composites as Normal's
         D3D11_BLEND_DESC blend{};
         auto& rt = blend.RenderTarget[0];
         rt.BlendEnable = TRUE;
         rt.SrcBlend = rt.SrcBlendAlpha = D3D11_BLEND_ONE;
-        rt.DestBlend = rt.DestBlendAlpha = b == 0 ? D3D11_BLEND_INV_SRC_ALPHA : D3D11_BLEND_ONE;
+        rt.DestBlend = rt.DestBlendAlpha = b == 1 ? D3D11_BLEND_ONE : D3D11_BLEND_INV_SRC_ALPHA;
+        if (b == 2)
+            rt.SrcBlend = D3D11_BLEND_DEST_COLOR;
         rt.BlendOp = rt.BlendOpAlpha = D3D11_BLEND_OP_ADD;
         rt.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
         check(d3d->CreateBlendState(&blend, &blends_[b]), "CreateBlendState (ui2d)");

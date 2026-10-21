@@ -25,8 +25,9 @@ struct ColorTransform {
     }
 };
 
-// Normal: source over destination; Add: source added (Flash's BlendMode.ADD). Colours are premultiplied throughout.
-enum class Blend { Normal, Add };
+// Normal: source over destination; Add: source added (Flash's BlendMode.ADD); Multiply: the destination times the source
+// over it (BlendMode.MULTIPLY: Cd (1 - As) + Cd Cs As). Colours are premultiplied throughout.
+enum class Blend { Normal, Add, Multiply };
 
 // One textured rectangle. Its local corners (x, y) to (x + width, y + height), as row vectors (x, y, 0, 1) times matrix, give stage
 // units in homogeneous form, so a Flash perspective projection keeps its perspective.
@@ -134,7 +135,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader_, stencilShader_, coverShader_;
     Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader_, paintShader_;
     Microsoft::WRL::ComPtr<ID3D11InputLayout> layout_, pointLayout_;
-    Microsoft::WRL::ComPtr<ID3D11BlendState> blends_[2], noColor_;
+    Microsoft::WRL::ComPtr<ID3D11BlendState> blends_[3], noColor_;
     // content: inside the masks; count: a fill's count; cover: where it's odd, back to the depth; maskQuad: a quad's rectangle onto
     // the depth; pop: a mask's pieces off it
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> content_, count_, cover_, maskQuad_, pop_;
