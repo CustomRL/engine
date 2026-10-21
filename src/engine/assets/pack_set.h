@@ -4,11 +4,12 @@
 
 namespace engine::assets {
 
-// The packs of one cook, mapped together at startup. The first pack's build pins the run: a pack cooked from another build is refused,
-// so a run never mixes two cooks. find looks in each pack in turn; no allocation.
+// The packs of one cook, mapped together at startup, then any a run loads later (a menu's newly equipped items). The first pack's
+// build pins the run: a pack cooked from another build is refused, so a run never mixes two cooks. find looks in each pack in turn;
+// no allocation.
 class PackSet {
 public:
-    static constexpr int kMaxPacks = 32;
+    static constexpr int kMaxPacks = 256;
 
     // Maps one more pack. False with a message in error (when given) if it can't be mapped, isn't a pack, comes from another build than
     // the packs before it, or there are already kMaxPacks.
