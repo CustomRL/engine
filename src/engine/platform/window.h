@@ -38,6 +38,7 @@ public:
     void pushMouseMove(float x, float y);
     void pushMouseButton(int button, bool down);
     void pushKey(int scancode, bool down);
+    void pushText(const char* utf8);  // as typed: an SDL_EVENT_TEXT_INPUT
     // On, pump drops what the user does (keys, mouse, focus changes, pads), so a run sees only what the push calls give it
     void setPushedInputOnly(bool on);
     // A tool layer over the window (an immediate-mode UI): pump hands it each event before input() gets it, and an event it returns true

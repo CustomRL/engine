@@ -3,6 +3,7 @@
 #include <SDL3/SDL.h>
 
 #include <algorithm>
+#include <cstring>
 #include <iterator>
 #include <utility>
 
@@ -49,6 +50,12 @@ void Input::handle(const SDL_Event& event) {
     case SDL_EVENT_MOUSE_WHEEL:
         wheel_ += event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -event.wheel.y : event.wheel.y;
         break;
+    case SDL_EVENT_TEXT_INPUT:
+        if (const size_t n = std::strlen(event.text.text); textLength_ + n <= sizeof text_) {
+            std::memcpy(text_ + textLength_, event.text.text, n);
+            textLength_ += n;
+        }
+        break;
     case SDL_EVENT_WINDOW_FOCUS_LOST:  // a key let go in another window never sends its release here
         std::fill(std::begin(pressed_), std::end(pressed_), -1.0);
         break;
@@ -76,6 +83,10 @@ void Input::takeMouseMotion(float& dx, float& dy) {
 
 float Input::takeWheel() {
     return std::exchange(wheel_, 0.0f);
+}
+
+std::string_view Input::takeText() {
+    return {text_, std::exchange(textLength_, size_t(0))};
 }
 
 const Gamepad* Input::gamepad() {

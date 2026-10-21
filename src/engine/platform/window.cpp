@@ -22,6 +22,7 @@ Window::Window(const char* title, int width, int height, bool borderless) {
                                (borderless ? SDL_WINDOW_BORDERLESS : SDL_WINDOW_RESIZABLE) | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!window_)
         fatal("SDL_CreateWindow: %s", SDL_GetError());
+    SDL_StartTextInput(window_);  // typing's SDL_EVENT_TEXT_INPUT, for a menu's text fields
 }
 
 Window::~Window() {
@@ -97,6 +98,15 @@ void Window::pushKey(int scancode, bool down) {
     event.key.windowID = SDL_GetWindowID(window_);
     event.key.scancode = static_cast<SDL_Scancode>(scancode);
     event.key.down = down;
+    event.common.timestamp = SDL_GetTicksNS();
+    input_.handle(event);
+}
+
+void Window::pushText(const char* utf8) {
+    SDL_Event event = {};
+    event.type = SDL_EVENT_TEXT_INPUT;
+    event.text.windowID = SDL_GetWindowID(window_);
+    event.text.text = utf8;
     event.common.timestamp = SDL_GetTicksNS();
     input_.handle(event);
 }

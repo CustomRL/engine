@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 union SDL_Event;
 struct SDL_Gamepad;
 
@@ -32,6 +34,8 @@ public:
     void takeMouseMotion(float& dx, float& dy);
     // The wheel's turn since the last call, in notches, positive away from the user
     float takeWheel();
+    // What was typed since the last call, in UTF-8 (SDL_EVENT_TEXT_INPUT's); an event past its room is dropped
+    std::string_view takeText();
     // The first connected gamepad as of now, or null without one
     const Gamepad* gamepad();
     // Off, gamepad() reports none
@@ -44,6 +48,8 @@ private:
     float mouseX_ = 0;
     float mouseY_ = 0;
     float wheel_ = 0;
+    char text_[64];  // ponytail: a frame's typing; an IME's longer commit is dropped whole
+    size_t textLength_ = 0;
     SDL_Gamepad* pad_ = nullptr;
     bool padEnabled_ = true;
     Gamepad state_;
