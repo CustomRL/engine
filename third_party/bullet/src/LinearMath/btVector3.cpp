@@ -15,9 +15,8 @@
  This source version has been altered.
  */
 
-#if defined (_WIN32) || defined (__i386__)
-#define BT_USE_SSE_IN_API
-#endif
+// RL (261013): upstream defined BT_USE_SSE_IN_API here for Windows. The exe holds no RSQRTSS, so its btVector3
+// inlines are the scalar ones; with the define, a build linked without LTCG kept this file's rsqrt normalize.
 
 
 #include "btVector3.h"
